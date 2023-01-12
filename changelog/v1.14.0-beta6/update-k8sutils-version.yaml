@@ -1,4 +1,0 @@
-changelog:
-  - type: NON_USER_FACING
-    issueLink: NA
-    description: update k8s utils version to 0.1.8
