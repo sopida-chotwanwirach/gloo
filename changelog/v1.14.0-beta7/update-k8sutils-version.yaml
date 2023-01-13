@@ -1,4 +1,6 @@
 changelog:
-  - type: NON_USER_FACING
-    issueLink: NA
-    description: update k8s utils version to 0.1.8
+  - type: DEPENDENCY_BUMP
+    dependencyOwner: solo-io
+    dependencyRepo: k8s-utils
+    dependencyTag: v0.1.9
+    description: Dependency bump - k8s-utils to v0.1.9
