@@ -19,6 +19,7 @@ import (
 
 	gloov1 "github.com/solo-io/gloo/projects/gloo/pkg/api/v1"
 	"github.com/solo-io/gloo/projects/gloo/pkg/api/v1/gloosnapshot"
+	syncerstats "github.com/solo-io/gloo/projects/gloo/pkg/syncer/stats"
 
 	"github.com/solo-io/gloo/pkg/utils"
 
@@ -52,8 +53,8 @@ var (
 	resourceTypeKey, _ = tag.NewKey("resource_type")
 	resourceRefKey, _  = tag.NewKey("resource_ref")
 
-	mGatewayResourcesAccepted = utils.MakeSumCounter("validation.gateway.solo.io/resources_accepted", "The number of resources accepted")
-	mGatewayResourcesRejected = utils.MakeSumCounter("validation.gateway.solo.io/resources_rejected", "The number of resources rejected")
+	mGatewayResourcesAccepted = utils.MakeSumCounter("validation.gateway.solo.io/resources_accepted", "The number of resources accepted", syncerstats.ProxyNameKey)
+	mGatewayResourcesRejected = utils.MakeSumCounter("validation.gateway.solo.io/resources_rejected", "The number of resources rejected", syncerstats.ProxyNameKey)
 
 	unmarshalErrMsg     = "could not unmarshal raw object"
 	UnmarshalErr        = errors.New(unmarshalErrMsg)
@@ -72,12 +73,13 @@ const (
 	ApplicationYaml = "application/x-yaml"
 )
 
-func incrementMetric(ctx context.Context, resource string, ref *core.ResourceRef, m *stats.Int64Measure) {
+func incrementMetric(ctx context.Context, resource string, ref *core.ResourceRef, m *stats.Int64Measure, proxyName string) {
 	utils.MeasureOne(
 		ctx,
 		m,
 		tag.Insert(resourceTypeKey, resource),
 		tag.Insert(resourceRefKey, fmt.Sprintf("%v.%v", ref.GetNamespace(), ref.GetName())),
+		tag.Insert(syncerstats.ProxyNameKey, proxyName),
 	)
 }
 
@@ -341,7 +343,12 @@ func (wh *gatewayValidationWebhook) makeAdmissionResponse(ctx context.Context, r
 	// even if validation is set to always accept, we want to fail on unmarshal errors
 	if validationErrs.ErrorOrNil() == nil || (wh.alwaysAccept && !hasUnmarshalErr) {
 		logger.Debugf("Succeeded, alwaysAccept: %v validationErrs: %v", wh.alwaysAccept, validationErrs)
-		incrementMetric(ctx, gvk.String(), ref, mGatewayResourcesAccepted)
+
+		for _, proxy := range reports.GetProxies() {
+			proxyName := proxy.GetMetadata().GetName()
+			incrementMetric(ctx, gvk.String(), ref, mGatewayResourcesAccepted, proxyName)
+		}
+
 		return &AdmissionResponseWithProxies{
 			AdmissionResponse: &v1beta1.AdmissionResponse{
 				Allowed: true,
@@ -350,7 +357,11 @@ func (wh *gatewayValidationWebhook) makeAdmissionResponse(ctx context.Context, r
 		}
 	}
 
-	incrementMetric(ctx, gvk.String(), ref, mGatewayResourcesRejected)
+	for _, proxy := range reports.GetProxies() {
+		proxyName := proxy.GetMetadata().GetName()
+		incrementMetric(ctx, gvk.String(), ref, mGatewayResourcesRejected, proxyName)
+	}
+
 	logger.Errorf("Validation failed: %v", validationErrs)
 
 	finalErr := errors.Errorf("resource incompatible with current Gloo snapshot: %v", validationErrs.Errors)

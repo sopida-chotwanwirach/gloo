@@ -16,15 +16,16 @@ import (
 	gloov1 "github.com/solo-io/gloo/projects/gloo/pkg/api/v1"
 	gloov1snap "github.com/solo-io/gloo/projects/gloo/pkg/api/v1/gloosnapshot"
 	"github.com/solo-io/gloo/projects/gloo/pkg/syncer"
+	syncerstats "github.com/solo-io/gloo/projects/gloo/pkg/syncer/stats"
 	syncerValidation "github.com/solo-io/gloo/projects/gloo/pkg/syncer/validation"
 	validationutils "github.com/solo-io/gloo/projects/gloo/pkg/utils/validation"
 	gloovalidation "github.com/solo-io/gloo/projects/gloo/pkg/validation"
 
+	"github.com/solo-io/gloo/test/helpers"
 	"github.com/solo-io/gloo/test/samples"
 	"github.com/solo-io/go-utils/testutils"
 	"github.com/solo-io/solo-kit/pkg/api/v1/resources"
 	"github.com/solo-io/solo-kit/pkg/api/v1/resources/core"
-	"go.opencensus.io/stats/view"
 	"golang.org/x/sync/errgroup"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	k8syamlutil "sigs.k8s.io/yaml"
@@ -53,7 +54,7 @@ var _ = Describe("Validator", func() {
 			ExtensionValidator: extensionValidator,
 			AllowWarnings:      false,
 		})
-		mValidConfig = utils.MakeGauge("validation.gateway.solo.io/valid_config", "A boolean indicating whether gloo config is valid")
+		mValidConfig = utils.MakeGauge("validation.gateway.solo.io/valid_config", "A boolean indicating whether gloo config is valid", syncerstats.ProxyNameKey)
 	})
 
 	It("returns error before sync called", func() {
@@ -64,13 +65,15 @@ var _ = Describe("Validator", func() {
 	})
 
 	It("has mValidConfig=1 after Sync is called with valid snapshot", func() {
-		err := v.Sync(context.TODO(), &gloov1snap.ApiSnapshot{})
+		snap := samples.SimpleGlooSnapshot(ns)
+		err := v.Sync(context.TODO(), snap)
 		Expect(err).NotTo(HaveOccurred())
 
-		rows, err := view.RetrieveData("validation.gateway.solo.io/valid_config")
+		//syncerstats.ProxyNameKey.Name()
+		data, err := helpers.ReadMetricByLabel("validation.gateway.solo.io/valid_config", syncerstats.ProxyNameKey.Name(), "gateway-proxy")
 		Expect(err).NotTo(HaveOccurred())
-		Expect(rows).NotTo(BeEmpty())
-		Expect(rows[0].Data.(*view.LastValueData).Value).To(BeEquivalentTo(1))
+		Expect(data).To(BeEquivalentTo(1))
+
 	})
 
 	It("has mValidConfig=0 after Sync is called with invalid snapshot", func() {
@@ -93,10 +96,9 @@ var _ = Describe("Validator", func() {
 		err := v.Sync(context.TODO(), snap)
 		Expect(err).To(HaveOccurred())
 
-		rows, err := view.RetrieveData("validation.gateway.solo.io/valid_config")
+		data, err := helpers.ReadMetricByLabel("validation.gateway.solo.io/valid_config", syncerstats.ProxyNameKey.Name(), "gateway-proxy")
 		Expect(err).NotTo(HaveOccurred())
-		Expect(rows).NotTo(BeEmpty())
-		Expect(rows[0].Data.(*view.LastValueData).Value).To(BeEquivalentTo(0))
+		Expect(data).To(BeEquivalentTo(0))
 	})
 
 	Context("validating gloo resources", func() {
@@ -583,10 +585,9 @@ var _ = Describe("Validator", func() {
 				_, err = v.ValidateModifiedGvk(context.TODO(), v1.VirtualServiceGVK, snap.VirtualServices[0], false)
 				Expect(err).NotTo(HaveOccurred())
 
-				rows, err := view.RetrieveData("validation.gateway.solo.io/valid_config")
+				data, err := helpers.ReadMetricByLabel("validation.gateway.solo.io/valid_config", syncerstats.ProxyNameKey.Name(), "gateway-proxy")
 				Expect(err).NotTo(HaveOccurred())
-				Expect(rows).NotTo(BeEmpty())
-				Expect(rows[0].Data.(*view.LastValueData).Value).To(BeEquivalentTo(1))
+				Expect(data).To(BeEquivalentTo(1))
 			})
 			It("returns 0 when there are validation errors", func() {
 				v.glooValidator = ValidateFail
@@ -598,10 +599,9 @@ var _ = Describe("Validator", func() {
 				_, err = v.ValidateModifiedGvk(context.TODO(), v1.VirtualServiceGVK, snap.VirtualServices[0], false)
 				Expect(err).To(HaveOccurred())
 
-				rows, err := view.RetrieveData("validation.gateway.solo.io/valid_config")
+				data, err := helpers.ReadMetricByLabel("validation.gateway.solo.io/valid_config", syncerstats.ProxyNameKey.Name(), "gateway-proxy")
 				Expect(err).NotTo(HaveOccurred())
-				Expect(rows).NotTo(BeEmpty())
-				Expect(rows[0].Data.(*view.LastValueData).Value).To(BeEquivalentTo(0))
+				Expect(data).To(BeEquivalentTo(0))
 			})
 			It("returns 0 when there are validation warnings and allowWarnings is false", func() {
 				v.allowWarnings = false
@@ -614,10 +614,9 @@ var _ = Describe("Validator", func() {
 				_, err = v.ValidateModifiedGvk(context.TODO(), v1.VirtualServiceGVK, snap.VirtualServices[0], false)
 				Expect(err).To(HaveOccurred())
 
-				rows, err := view.RetrieveData("validation.gateway.solo.io/valid_config")
+				data, err := helpers.ReadMetricByLabel("validation.gateway.solo.io/valid_config", syncerstats.ProxyNameKey.Name(), "gateway-proxy")
 				Expect(err).NotTo(HaveOccurred())
-				Expect(rows).NotTo(BeEmpty())
-				Expect(rows[0].Data.(*view.LastValueData).Value).To(BeEquivalentTo(0))
+				Expect(data).To(BeEquivalentTo(0))
 			})
 			It("returns 1 when there are validation warnings and allowWarnings is true", func() {
 				v.allowWarnings = true
@@ -630,10 +629,9 @@ var _ = Describe("Validator", func() {
 				_, err = v.ValidateModifiedGvk(context.TODO(), v1.VirtualServiceGVK, snap.VirtualServices[0], false)
 				Expect(err).NotTo(HaveOccurred())
 
-				rows, err := view.RetrieveData("validation.gateway.solo.io/valid_config")
+				data, err := helpers.ReadMetricByLabel("validation.gateway.solo.io/valid_config", syncerstats.ProxyNameKey.Name(), "gateway-proxy")
 				Expect(err).NotTo(HaveOccurred())
-				Expect(rows).NotTo(BeEmpty())
-				Expect(rows[0].Data.(*view.LastValueData).Value).To(BeEquivalentTo(1))
+				Expect(data).To(BeEquivalentTo(1))
 			})
 			It("does not affect metrics when dryRun is true", func() {
 				v.glooValidator = ValidateFail
@@ -642,21 +640,17 @@ var _ = Describe("Validator", func() {
 				err := v.Sync(context.TODO(), snap)
 				Expect(err).NotTo(HaveOccurred())
 
-				// Metric should be valid after successful Sync
-				rows, err := view.RetrieveData("validation.gateway.solo.io/valid_config")
+				data, err := helpers.ReadMetricByLabel("validation.gateway.solo.io/valid_config", syncerstats.ProxyNameKey.Name(), "gateway-proxy")
 				Expect(err).NotTo(HaveOccurred())
-				Expect(rows).NotTo(BeEmpty())
-				Expect(rows[0].Data.(*view.LastValueData).Value).To(BeEquivalentTo(1))
+				Expect(data).To(BeEquivalentTo(1))
 
 				// Run a failed validation
 				_, err = v.ValidateModifiedGvk(context.TODO(), v1.VirtualServiceGVK, snap.VirtualServices[0], true)
 				Expect(err).To(HaveOccurred())
 
-				// The metric should still be valid, since dryRun was true
-				rows, err = view.RetrieveData("validation.gateway.solo.io/valid_config")
+				data, err = helpers.ReadMetricByLabel("validation.gateway.solo.io/valid_config", syncerstats.ProxyNameKey.Name(), "gateway-proxy")
 				Expect(err).NotTo(HaveOccurred())
-				Expect(rows).NotTo(BeEmpty())
-				Expect(rows[0].Data.(*view.LastValueData).Value).To(BeEquivalentTo(1))
+				Expect(data).To(BeEquivalentTo(1))
 			})
 		})
 		Context("dry-run", func() {

@@ -790,7 +790,28 @@ endif
 
 CLUSTER_NAME ?= kind
 
-.PHONY: push-kind-images
+#----------------------------------------------------------------------------------
+# Kind Load Images
+#----------------------------------------------------------------------------------
+
+CLUSTER_NAME ?= kind
+
+kind-load-%:
+	kind load docker-image $(IMAGE_REPO)/$*:$(VERSION) --name $(CLUSTER_NAME)
+
+kind-load-%-debug:
+	kind load docker-image $(IMAGE_REPO)/$*:$(VERSION)-debug --name $(CLUSTER_NAME)
+
+kind-load-%-extended:
+	kind load docker-image $(IMAGE_REPO)/$*:$(VERSION)-extended --name $(CLUSTER_NAME)
+
+
+# Build and push an updated image into kind
+kind-reload-%: %-docker kind-load-%
+	kubectl rollout restart deployment/$* -n $(INSTALL_NAMESPACE)
+
+
+.PHONY: push-kind-docker
 push-kind-images: docker
 	kind load docker-image $(IMAGE_REPO)/ingress:$(VERSION) --name $(CLUSTER_NAME)
 	kind load docker-image $(IMAGE_REPO)/discovery:$(VERSION) --name $(CLUSTER_NAME)

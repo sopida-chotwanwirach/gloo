@@ -8,6 +8,7 @@ import (
 	"github.com/solo-io/gloo/projects/gloo/pkg/api/v1/gloosnapshot"
 	gloov1snap "github.com/solo-io/gloo/projects/gloo/pkg/api/v1/gloosnapshot"
 	"github.com/solo-io/go-utils/hashutils"
+	"go.opencensus.io/tag"
 
 	"github.com/hashicorp/go-multierror"
 	"github.com/rotisserie/eris"
@@ -17,6 +18,7 @@ import (
 	"github.com/solo-io/gloo/projects/gateway/pkg/utils"
 	"github.com/solo-io/gloo/projects/gloo/pkg/api/grpc/validation"
 	gloov1 "github.com/solo-io/gloo/projects/gloo/pkg/api/v1"
+	syncerstats "github.com/solo-io/gloo/projects/gloo/pkg/syncer/stats"
 	syncerValidation "github.com/solo-io/gloo/projects/gloo/pkg/syncer/validation"
 	validationutils "github.com/solo-io/gloo/projects/gloo/pkg/utils/validation"
 	gloovalidation "github.com/solo-io/gloo/projects/gloo/pkg/validation"
@@ -72,7 +74,9 @@ var (
 	}
 
 	mValidConfig = utils2.MakeGauge("validation.gateway.solo.io/valid_config",
-		"A boolean indicating whether gloo config is valid")
+		"A boolean indicating whether gloo config is valid for the proxy",
+		syncerstats.ProxyNameKey,
+	)
 )
 
 const (
@@ -137,6 +141,7 @@ func (v *validator) ready() bool {
 }
 
 func (v *validator) Sync(ctx context.Context, snap *gloov1snap.ApiSnapshot) error {
+	contextutils.LoggerFrom(ctx).Info("In Sync ")
 	v.lock.Lock() // hashing and cloning resources may mutate the object, so we need to lock
 	defer v.lock.Unlock()
 	if !v.gatewayUpdate(snap) {
@@ -162,9 +167,16 @@ func (v *validator) Sync(ctx context.Context, snap *gloov1snap.ApiSnapshot) erro
 	// resource is applied (https://github.com/solo-io/gloo/issues/5949).
 	if v.latestSnapshot == nil {
 		if errs == nil {
-			utils2.MeasureOne(ctx, mValidConfig)
+			for proxyName := range gatewaysByProxy {
+				contextutils.LoggerFrom(ctx).Infof("mValidConfig to 1, nil snapshot for proxy %s", proxyName)
+				utils2.MeasureOne(ctx, mValidConfig, tag.Insert(syncerstats.ProxyNameKey, proxyName))
+			}
+
 		} else {
-			utils2.MeasureZero(ctx, mValidConfig)
+			for proxyName := range gatewaysByProxy {
+				contextutils.LoggerFrom(ctx).Infof("mValidConfig to 0, nil snapshot for proxy %s", proxyName)
+				utils2.MeasureZero(ctx, mValidConfig, tag.Insert(syncerstats.ProxyNameKey, proxyName))
+			}
 		}
 	}
 	v.latestSnapshotErr = errs
@@ -236,7 +248,7 @@ func (v *validator) validateSnapshot(opts *validationOptions) (*Reports, error) 
 	}
 	ref := opts.Resource.GetMetadata().Ref()
 	ctx = contextutils.WithLogger(ctx, "gateway-validator")
-
+	contextutils.LoggerFrom(ctx).Info("in validateSnapshot")
 	// currently have the other for Gloo resources
 	snapshotClone, err := v.copySnapshotNonThreadSafe(ctx, opts.DryRun)
 	if err != nil {
@@ -326,7 +338,10 @@ func (v *validator) validateSnapshot(opts *validationOptions) (*Reports, error) 
 	if errs != nil {
 		contextutils.LoggerFrom(ctx).Debugf("Rejected %T %v: %v", opts.Resource, ref, errs)
 		if !opts.DryRun {
-			utils2.MeasureZero(ctx, mValidConfig)
+			contextutils.LoggerFrom(ctx).Info("mValidConfig to 0, Rejected")
+			for proxyName := range gatewaysByProxy {
+				utils2.MeasureZero(ctx, mValidConfig, tag.Insert(syncerstats.ProxyNameKey, proxyName))
+			}
 		}
 		return &Reports{ProxyReports: &proxyReports, Proxies: proxies}, errors.Wrapf(errs,
 			"validating %T %v",
@@ -336,7 +351,10 @@ func (v *validator) validateSnapshot(opts *validationOptions) (*Reports, error) 
 
 	contextutils.LoggerFrom(ctx).Debugf("Accepted %T %v", opts.Resource, ref)
 	if !opts.DryRun {
-		utils2.MeasureOne(ctx, mValidConfig)
+		contextutils.LoggerFrom(ctx).Info("mValidConfig to 1, Accepted")
+		for proxyName := range gatewaysByProxy {
+			utils2.MeasureOne(ctx, mValidConfig, tag.Insert(syncerstats.ProxyNameKey, proxyName))
+		}
 	}
 
 	reports := &Reports{ProxyReports: &proxyReports, Proxies: proxies}
@@ -454,9 +472,12 @@ func (v *validator) copySnapshotNonThreadSafe(ctx context.Context, dryRun bool) 
 	if v.latestSnapshot == nil {
 		return nil, HasNotReceivedFirstSync
 	}
+
+	contextutils.LoggerFrom(ctx).Infof("v.latestSnapshot")
 	if v.latestSnapshotErr != nil {
 		if !dryRun {
-			utils2.MeasureZero(ctx, mValidConfig)
+			contextutils.LoggerFrom(ctx).Infof("Setting mValidConfig to 0, nonsafe copy, error is %+v, context is %+v", v.latestSnapshotErr, ctx)
+			utils2.MeasureZero(ctx, mValidConfig, tag.Insert(syncerstats.ProxyNameKey, "bar"))
 		}
 		contextutils.LoggerFrom(ctx).Errorw(InvalidSnapshotErrMessage, zap.Error(v.latestSnapshotErr))
 		return nil, eris.New(InvalidSnapshotErrMessage)
