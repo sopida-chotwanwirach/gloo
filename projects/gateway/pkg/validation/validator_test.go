@@ -69,7 +69,6 @@ var _ = Describe("Validator", func() {
 		err := v.Sync(context.TODO(), snap)
 		Expect(err).NotTo(HaveOccurred())
 
-		//syncerstats.ProxyNameKey.Name()
 		data, err := helpers.ReadMetricByLabel("validation.gateway.solo.io/valid_config", syncerstats.ProxyNameKey.Name(), "gateway-proxy")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(data).To(BeEquivalentTo(1))

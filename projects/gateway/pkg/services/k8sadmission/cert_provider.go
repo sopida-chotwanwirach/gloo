@@ -45,7 +45,6 @@ func NewCertificateProvider(certPath, keyPath string, logger *log.Logger, ctx co
 		return nil, err
 	}
 
-	// tag.Insert(syncerstats.ProxyNameKey, proxyName)
 	utils.MeasureOne(ctx, mReloadSuccess)
 	result := &certificateProvider{
 		ctx:       ctx,
