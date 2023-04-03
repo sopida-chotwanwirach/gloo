@@ -811,7 +811,7 @@ kind-reload-%: %-docker kind-load-%
 	kubectl rollout restart deployment/$* -n $(INSTALL_NAMESPACE)
 
 
-.PHONY: push-kind-docker
+.PHONY: push-kind-images
 push-kind-images: docker
 	kind load docker-image $(IMAGE_REPO)/ingress:$(VERSION) --name $(CLUSTER_NAME)
 	kind load docker-image $(IMAGE_REPO)/discovery:$(VERSION) --name $(CLUSTER_NAME)
