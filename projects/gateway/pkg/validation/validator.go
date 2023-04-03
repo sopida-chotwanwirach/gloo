@@ -168,13 +168,11 @@ func (v *validator) Sync(ctx context.Context, snap *gloov1snap.ApiSnapshot) erro
 	if v.latestSnapshot == nil {
 		if errs == nil {
 			for proxyName := range gatewaysByProxy {
-				contextutils.LoggerFrom(ctx).Infof("mValidConfig to 1, nil snapshot for proxy %s", proxyName)
 				utils2.MeasureOne(ctx, mValidConfig, tag.Insert(syncerstats.ProxyNameKey, proxyName))
 			}
 
 		} else {
 			for proxyName := range gatewaysByProxy {
-				contextutils.LoggerFrom(ctx).Infof("mValidConfig to 0, nil snapshot for proxy %s", proxyName)
 				utils2.MeasureZero(ctx, mValidConfig, tag.Insert(syncerstats.ProxyNameKey, proxyName))
 			}
 		}
@@ -338,7 +336,6 @@ func (v *validator) validateSnapshot(opts *validationOptions) (*Reports, error) 
 	if errs != nil {
 		contextutils.LoggerFrom(ctx).Debugf("Rejected %T %v: %v", opts.Resource, ref, errs)
 		if !opts.DryRun {
-			contextutils.LoggerFrom(ctx).Info("mValidConfig to 0, Rejected")
 			for proxyName := range gatewaysByProxy {
 				utils2.MeasureZero(ctx, mValidConfig, tag.Insert(syncerstats.ProxyNameKey, proxyName))
 			}
@@ -351,7 +348,6 @@ func (v *validator) validateSnapshot(opts *validationOptions) (*Reports, error) 
 
 	contextutils.LoggerFrom(ctx).Debugf("Accepted %T %v", opts.Resource, ref)
 	if !opts.DryRun {
-		contextutils.LoggerFrom(ctx).Info("mValidConfig to 1, Accepted")
 		for proxyName := range gatewaysByProxy {
 			utils2.MeasureOne(ctx, mValidConfig, tag.Insert(syncerstats.ProxyNameKey, proxyName))
 		}
@@ -476,7 +472,6 @@ func (v *validator) copySnapshotNonThreadSafe(ctx context.Context, dryRun bool) 
 	contextutils.LoggerFrom(ctx).Infof("v.latestSnapshot")
 	if v.latestSnapshotErr != nil {
 		if !dryRun {
-			contextutils.LoggerFrom(ctx).Infof("Setting mValidConfig to 0, nonsafe copy, error is %+v, context is %+v", v.latestSnapshotErr, ctx)
 			utils2.MeasureZero(ctx, mValidConfig, tag.Insert(syncerstats.ProxyNameKey, "bar"))
 		}
 		contextutils.LoggerFrom(ctx).Errorw(InvalidSnapshotErrMessage, zap.Error(v.latestSnapshotErr))
