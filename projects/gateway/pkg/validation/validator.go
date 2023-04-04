@@ -14,6 +14,7 @@ import (
 	"github.com/rotisserie/eris"
 	errors "github.com/rotisserie/eris"
 	utils2 "github.com/solo-io/gloo/pkg/utils"
+	v1 "github.com/solo-io/gloo/projects/gateway/pkg/api/v1"
 	"github.com/solo-io/gloo/projects/gateway/pkg/translator"
 	"github.com/solo-io/gloo/projects/gateway/pkg/utils"
 	"github.com/solo-io/gloo/projects/gloo/pkg/api/grpc/validation"
@@ -74,6 +75,9 @@ var (
 	}
 
 	mValidConfig = utils2.MakeGauge("validation.gateway.solo.io/valid_config",
+		"A boolean indicating whether gloo config is valid, Unreliable when there are multiple proxies, please use proxy_valid_config")
+
+	mProxyValidConfig = utils2.MakeGauge("validation.gateway.solo.io/proxy_valid_config",
 		"A boolean indicating whether gloo config is valid for the proxy",
 		syncerstats.ProxyNameKey,
 	)
@@ -141,7 +145,6 @@ func (v *validator) ready() bool {
 }
 
 func (v *validator) Sync(ctx context.Context, snap *gloov1snap.ApiSnapshot) error {
-	contextutils.LoggerFrom(ctx).Info("In Sync ")
 	v.lock.Lock() // hashing and cloning resources may mutate the object, so we need to lock
 	defer v.lock.Unlock()
 	if !v.gatewayUpdate(snap) {
@@ -167,14 +170,10 @@ func (v *validator) Sync(ctx context.Context, snap *gloov1snap.ApiSnapshot) erro
 	// resource is applied (https://github.com/solo-io/gloo/issues/5949).
 	if v.latestSnapshot == nil {
 		if errs == nil {
-			for proxyName := range gatewaysByProxy {
-				utils2.MeasureOne(ctx, mValidConfig, tag.Insert(syncerstats.ProxyNameKey, proxyName))
-			}
+			measureValidConfig(ctx, gatewaysByProxy)
 
 		} else {
-			for proxyName := range gatewaysByProxy {
-				utils2.MeasureZero(ctx, mValidConfig, tag.Insert(syncerstats.ProxyNameKey, proxyName))
-			}
+			measureInvalidConfig(ctx, gatewaysByProxy)
 		}
 	}
 	v.latestSnapshotErr = errs
@@ -336,9 +335,7 @@ func (v *validator) validateSnapshot(opts *validationOptions) (*Reports, error) 
 	if errs != nil {
 		contextutils.LoggerFrom(ctx).Debugf("Rejected %T %v: %v", opts.Resource, ref, errs)
 		if !opts.DryRun {
-			for proxyName := range gatewaysByProxy {
-				utils2.MeasureZero(ctx, mValidConfig, tag.Insert(syncerstats.ProxyNameKey, proxyName))
-			}
+			measureInvalidConfig(ctx, gatewaysByProxy)
 		}
 		return &Reports{ProxyReports: &proxyReports, Proxies: proxies}, errors.Wrapf(errs,
 			"validating %T %v",
@@ -348,9 +345,7 @@ func (v *validator) validateSnapshot(opts *validationOptions) (*Reports, error) 
 
 	contextutils.LoggerFrom(ctx).Debugf("Accepted %T %v", opts.Resource, ref)
 	if !opts.DryRun {
-		for proxyName := range gatewaysByProxy {
-			utils2.MeasureOne(ctx, mValidConfig, tag.Insert(syncerstats.ProxyNameKey, proxyName))
-		}
+		measureValidConfig(ctx, gatewaysByProxy)
 	}
 
 	reports := &Reports{ProxyReports: &proxyReports, Proxies: proxies}
@@ -469,15 +464,15 @@ func (v *validator) copySnapshotNonThreadSafe(ctx context.Context, dryRun bool) 
 		return nil, HasNotReceivedFirstSync
 	}
 
+	snapshotClone := v.latestSnapshot.Clone()
 	contextutils.LoggerFrom(ctx).Infof("v.latestSnapshot")
 	if v.latestSnapshotErr != nil {
-		if !dryRun {
-			utils2.MeasureZero(ctx, mValidConfig, tag.Insert(syncerstats.ProxyNameKey, "bar"))
-		}
+		gatewaysByProxy := utils.GatewaysByProxyName(snapshotClone.Gateways)
+		measureInvalidConfig(ctx, gatewaysByProxy)
 		contextutils.LoggerFrom(ctx).Errorw(InvalidSnapshotErrMessage, zap.Error(v.latestSnapshotErr))
 		return nil, eris.New(InvalidSnapshotErrMessage)
 	}
-	snapshotClone := v.latestSnapshot.Clone()
+
 	return &snapshotClone, nil
 }
 
@@ -534,4 +529,18 @@ func UnmarshalResource(kubeJson []byte, resource resources.Resource) error {
 		}
 	}
 	return nil
+}
+
+func measureInvalidConfig(ctx context.Context, gatewaysByProxy map[string]v1.GatewayList) {
+	utils2.MeasureZero(ctx, mValidConfig)
+	for proxyName := range gatewaysByProxy {
+		utils2.MeasureZero(ctx, mProxyValidConfig, tag.Insert(syncerstats.ProxyNameKey, proxyName))
+	}
+}
+
+func measureValidConfig(ctx context.Context, gatewaysByProxy map[string]v1.GatewayList) {
+	utils2.MeasureOne(ctx, mValidConfig)
+	for proxyName := range gatewaysByProxy {
+		utils2.MeasureOne(ctx, mProxyValidConfig, tag.Insert(syncerstats.ProxyNameKey, proxyName))
+	}
 }
