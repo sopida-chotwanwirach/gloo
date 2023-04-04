@@ -11,7 +11,6 @@ import (
 	"unsafe"
 
 	"github.com/solo-io/gloo/pkg/utils"
-	syncerstats "github.com/solo-io/gloo/projects/gloo/pkg/syncer/stats"
 	"go.opencensus.io/tag"
 )
 
@@ -26,8 +25,8 @@ type certificateProvider struct {
 }
 
 func NewCertificateProvider(certPath, keyPath string, logger *log.Logger, ctx context.Context, interval time.Duration) (*certificateProvider, error) {
-	mReloadSuccess := utils.MakeSumCounter("validation.gateway.solo.io/certificate_reload_success", "Number of successful certificate reloads", syncerstats.ProxyNameKey)
-	mReloadFailed := utils.MakeSumCounter("validation.gateway.solo.io/certificate_reload_failed", "Number of failed certificate reloads", syncerstats.ProxyNameKey)
+	mReloadSuccess := utils.MakeSumCounter("validation.gateway.solo.io/certificate_reload_success", "Number of successful certificate reloads")
+	mReloadFailed := utils.MakeSumCounter("validation.gateway.solo.io/certificate_reload_failed", "Number of failed certificate reloads")
 	tagKey, err := tag.NewKey("error")
 	if err != nil {
 		return nil, err
@@ -44,7 +43,6 @@ func NewCertificateProvider(certPath, keyPath string, logger *log.Logger, ctx co
 	if err != nil {
 		return nil, err
 	}
-
 	utils.MeasureOne(ctx, mReloadSuccess)
 	result := &certificateProvider{
 		ctx:       ctx,
