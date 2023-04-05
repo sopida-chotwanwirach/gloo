@@ -1,11 +1,8 @@
 changelog:
-  - type: FIX
+  - type: FEATURE
     issueLink: https://github.com/solo-io/solo-projects/issues/4169
-    resolvesIssue: true
+    resolvesIssue: false
     description: |
-      Adding labels to the following metrics to allow them to be tracked/reported on a per-proxy basis:
-      * validation_gateway_solo_io_valid_config
-      * validation_gateway_solo_io_certificate_reload_success
-      * validation_gateway_solo_io_certificate_reload_failed
-      * validation_gateway_solo_io_resources_accepted
-      * validation_gateway_solo_io_resources_rejected
+      The `validation_gateway_solo_io_valid_config` does not provide a useful measure when there are multiple prxoies.
+      We are adding a new metric `validation_gateway_solo_io_proxy_valid_config` that is labelled/tagged on a per-proxy basis
+      to use in these situations.
