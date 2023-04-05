@@ -54,9 +54,10 @@ var (
 
 	mGatewayResourcesAccepted = utils.MakeSumCounter("validation.gateway.solo.io/resources_accepted", "The number of resources accepted")
 	mGatewayResourcesRejected = utils.MakeSumCounter("validation.gateway.solo.io/resources_rejected", "The number of resources rejected")
-	unmarshalErrMsg           = "could not unmarshal raw object"
-	UnmarshalErr              = errors.New(unmarshalErrMsg)
-	WrappedUnmarshalErr       = func(err error) error {
+
+	unmarshalErrMsg     = "could not unmarshal raw object"
+	UnmarshalErr        = errors.New(unmarshalErrMsg)
+	WrappedUnmarshalErr = func(err error) error {
 		return errors.Wrapf(err, unmarshalErrMsg)
 	}
 	ListGVK = schema.GroupVersionKind{
@@ -340,9 +341,7 @@ func (wh *gatewayValidationWebhook) makeAdmissionResponse(ctx context.Context, r
 	// even if validation is set to always accept, we want to fail on unmarshal errors
 	if validationErrs.ErrorOrNil() == nil || (wh.alwaysAccept && !hasUnmarshalErr) {
 		logger.Debugf("Succeeded, alwaysAccept: %v validationErrs: %v", wh.alwaysAccept, validationErrs)
-
 		incrementMetric(ctx, gvk.String(), ref, mGatewayResourcesAccepted)
-
 		return &AdmissionResponseWithProxies{
 			AdmissionResponse: &v1beta1.AdmissionResponse{
 				Allowed: true,
@@ -352,7 +351,6 @@ func (wh *gatewayValidationWebhook) makeAdmissionResponse(ctx context.Context, r
 	}
 
 	incrementMetric(ctx, gvk.String(), ref, mGatewayResourcesRejected)
-
 	logger.Errorf("Validation failed: %v", validationErrs)
 
 	finalErr := errors.Errorf("resource incompatible with current Gloo snapshot: %v", validationErrs.Errors)
