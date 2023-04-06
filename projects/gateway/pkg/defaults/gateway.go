@@ -17,14 +17,14 @@ const (
 	ConfigDumpServiceSuffix = "-config-dump-service"
 )
 
-func DefaultGateway(writeNamespace string) *v1.Gateway {
+func NamedGateway(writeNamespace string, proxyName string) *v1.Gateway {
 	return &v1.Gateway{
 		Metadata: &core.Metadata{
-			Name:        GatewayProxyName,
+			Name:        proxyName,
 			Namespace:   writeNamespace,
 			Annotations: map[string]string{defaults.OriginKey: defaults.DefaultValue},
 		},
-		ProxyNames: []string{GatewayProxyName},
+		ProxyNames: []string{proxyName},
 		GatewayType: &v1.Gateway_HttpGateway{
 			HttpGateway: &v1.HttpGateway{},
 		},
@@ -32,6 +32,10 @@ func DefaultGateway(writeNamespace string) *v1.Gateway {
 		BindPort:      defaults.HttpPort,
 		UseProxyProto: &wrappers.BoolValue{Value: false},
 	}
+}
+
+func DefaultGateway(writeNamespace string) *v1.Gateway {
+	return NamedGateway(writeNamespace, GatewayProxyName)
 }
 
 func DefaultSslGateway(writeNamespace string) *v1.Gateway {

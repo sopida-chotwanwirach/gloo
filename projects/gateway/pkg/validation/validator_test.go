@@ -74,6 +74,7 @@ var _ = Describe("Validator", func() {
 		validateMValidConfig(1)
 	})
 
+	// Todo - why is this invalid?
 	It("has mValidConfig=0 after Sync is called with invalid snapshot", func() {
 		snap := samples.SimpleGlooSnapshot(ns)
 		snap.Gateways.Each(func(element *v1.Gateway) {
@@ -594,6 +595,29 @@ var _ = Describe("Validator", func() {
 				Expect(err).To(HaveOccurred())
 
 				validateMValidConfig(0)
+			})
+			It("returns 0 for 1 proxy when there are validation errors", func() {
+				v.glooValidator = ValidateFailToggle
+
+				snap := samples.TwoProxyGlooSnapshot(ns)
+				err := v.Sync(context.TODO(), snap)
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = v.ValidateModifiedGvk(context.TODO(), v1.VirtualServiceGVK, snap.VirtualServices[0], false)
+				Expect(err).To(HaveOccurred())
+
+				data, err := helpers.ReadMetricByLabel("validation.gateway.solo.io/proxy_valid_config", syncerstats.ProxyNameKey.Name(), "gateway-proxy")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(data).To(BeEquivalentTo(1))
+
+				data, err = helpers.ReadMetricByLabel("validation.gateway.solo.io/proxy_valid_config", syncerstats.ProxyNameKey.Name(), "gateway-proxy-2")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(data).To(BeEquivalentTo(0))
+
+				rows, err := view.RetrieveData("validation.gateway.solo.io/valid_config")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(rows).NotTo(BeEmpty())
+				Expect(rows[0].Data.(*view.LastValueData).Value).To(BeEquivalentTo(0))
 			})
 			It("returns 0 when there are validation warnings and allowWarnings is false", func() {
 				v.allowWarnings = false
@@ -1182,6 +1206,18 @@ func ValidateFail(ctx context.Context, proxy *gloov1.Proxy, resource resources.R
 		})
 	}
 	return validationReports, nil
+}
+
+var lastValidationPass = false
+
+func ValidateFailToggle(ctx context.Context, proxy *gloov1.Proxy, resource resources.Resource, delete bool) ([]*gloovalidation.GlooValidationReport, error) {
+	lastValidationPass = !lastValidationPass
+
+	if lastValidationPass {
+		return ValidateAccept(ctx, proxy, resource, delete)
+	} else {
+		return ValidateFail(ctx, proxy, resource, delete)
+	}
 }
 
 func ValidateWarn(ctx context.Context, proxy *gloov1.Proxy, resource resources.Resource, delete bool) ([]*gloovalidation.GlooValidationReport, error) {
