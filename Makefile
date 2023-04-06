@@ -723,15 +723,6 @@ ifeq ($(RELEASE), "true")
 	docker tag $(RETAG_IMAGE_REGISTRY)/sds:$(VERSION) $(IMAGE_REPO)/sds:$(VERSION) && \
 	docker tag $(RETAG_IMAGE_REGISTRY)/access-logger:$(VERSION) $(IMAGE_REPO)/access-logger:$(VERSION)
 
-	docker tag $(RETAG_IMAGE_REGISTRY)/ingress:$(VERSION)-extended $(IMAGE_REPO)/ingress:$(VERSION)-extended && \
-	docker tag $(RETAG_IMAGE_REGISTRY)/discovery:$(VERSION)-extended $(IMAGE_REPO)/discovery:$(VERSION)-extended && \
-	docker tag $(RETAG_IMAGE_REGISTRY)/gloo:$(VERSION)-extended $(IMAGE_REPO)/gloo:$(VERSION)-extended && \
-	docker tag $(RETAG_IMAGE_REGISTRY)/gloo-envoy-wrapper:$(VERSION)-extended $(IMAGE_REPO)/gloo-envoy-wrapper:$(VERSION)-extended && \
-	docker tag $(RETAG_IMAGE_REGISTRY)/certgen:$(VERSION)-extended $(IMAGE_REPO)/certgen:$(VERSION)-extended && \
-	docker tag $(RETAG_IMAGE_REGISTRY)/kubectl:$(VERSION)-extended $(IMAGE_REPO)/kubectl:$(VERSION)-extended && \
-	docker tag $(RETAG_IMAGE_REGISTRY)/sds:$(VERSION)-extended $(IMAGE_REPO)/sds:$(VERSION)-extended && \
-	docker tag $(RETAG_IMAGE_REGISTRY)/access-logger:$(VERSION)-extended $(IMAGE_REPO)/access-logger:$(VERSION)-extended
-
 	docker push $(IMAGE_REPO)/ingress:$(VERSION) && \
 	docker push $(IMAGE_REPO)/discovery:$(VERSION) && \
 	docker push $(IMAGE_REPO)/gloo:$(VERSION) && \
@@ -740,15 +731,6 @@ ifeq ($(RELEASE), "true")
 	docker push $(IMAGE_REPO)/kubectl:$(VERSION) && \
 	docker push $(IMAGE_REPO)/sds:$(VERSION) && \
 	docker push $(IMAGE_REPO)/access-logger:$(VERSION)
-
-	docker push $(IMAGE_REPO)/ingress:$(VERSION)-extended && \
-	docker push $(IMAGE_REPO)/discovery:$(VERSION)-extended && \
-	docker push $(IMAGE_REPO)/gloo:$(VERSION)-extended && \
-	docker push $(IMAGE_REPO)/gloo-envoy-wrapper:$(VERSION)-extended && \
-	docker push $(IMAGE_REPO)/certgen:$(VERSION)-extended && \
-	docker push $(IMAGE_REPO)/kubectl:$(VERSION)-extended && \
-	docker push $(IMAGE_REPO)/sds:$(VERSION)-extended && \
-	docker push $(IMAGE_REPO)/access-logger:$(VERSION)-extended
 endif
 
 .PHONY: docker docker-push
@@ -780,13 +762,6 @@ docker-push-local: $(DOCKER_IMAGES)
 	docker push $(IMAGE_REPO)/sds:$(VERSION) && \
 	docker push $(IMAGE_REPO)/access-logger:$(VERSION)
 
-# To mimic the effects of CI, CREATE_ASSETS, TAGGED_VERSION and CREATE_TEST_ASSETS need to be set
-# Extended images are the same as regular images but with curl
-.PHONY: docker-push-extended
-docker-push-extended:
-ifeq ($(CREATE_ASSETS), "true")
-	ci/extended-docker/extended-docker.sh
-endif
 
 CLUSTER_NAME ?= kind
 
@@ -801,9 +776,6 @@ kind-load-%:
 
 kind-load-%-debug:
 	kind load docker-image $(IMAGE_REPO)/$*:$(VERSION)-debug --name $(CLUSTER_NAME)
-
-kind-load-%-extended:
-	kind load docker-image $(IMAGE_REPO)/$*:$(VERSION)-extended --name $(CLUSTER_NAME)
 
 
 # Build and push an updated image into kind
