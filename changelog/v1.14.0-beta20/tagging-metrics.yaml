@@ -3,6 +3,6 @@ changelog:
     issueLink: https://github.com/solo-io/solo-projects/issues/4169
     resolvesIssue: false
     description: |
-      The `validation_gateway_solo_io_valid_config` does not provide a useful measure when there are multiple prxoies.
+      The `validation_gateway_solo_io_valid_config` does not provide a useful measure when there are multiple proxies.
       We are adding a new metric `validation_gateway_solo_io_proxy_valid_config` that is labelled/tagged on a per-proxy basis
       to use in these situations.

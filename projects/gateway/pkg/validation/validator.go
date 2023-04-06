@@ -245,7 +245,7 @@ func (v *validator) validateSnapshot(opts *validationOptions) (*Reports, error) 
 	}
 	ref := opts.Resource.GetMetadata().Ref()
 	ctx = contextutils.WithLogger(ctx, "gateway-validator")
-	contextutils.LoggerFrom(ctx).Info("in validateSnapshot")
+
 	// currently have the other for Gloo resources
 	snapshotClone, err := v.copySnapshotNonThreadSafe(ctx, opts.DryRun)
 	if err != nil {
@@ -464,15 +464,14 @@ func (v *validator) copySnapshotNonThreadSafe(ctx context.Context, dryRun bool) 
 		return nil, HasNotReceivedFirstSync
 	}
 
-	snapshotClone := v.latestSnapshot.Clone()
-	contextutils.LoggerFrom(ctx).Infof("v.latestSnapshot")
 	if v.latestSnapshotErr != nil {
-		gatewaysByProxy := utils.GatewaysByProxyName(snapshotClone.Gateways)
+		gatewaysByProxy := utils.GatewaysByProxyName(v.latestSnapshot.Gateways)
 		measureInvalidConfig(ctx, gatewaysByProxy)
 		contextutils.LoggerFrom(ctx).Errorw(InvalidSnapshotErrMessage, zap.Error(v.latestSnapshotErr))
 		return nil, eris.New(InvalidSnapshotErrMessage)
 	}
 
+	snapshotClone := v.latestSnapshot.Clone()
 	return &snapshotClone, nil
 }
 
