@@ -802,10 +802,6 @@ kind-load-%:
 kind-load-%-debug:
 	kind load docker-image $(IMAGE_REPO)/$*:$(VERSION)-debug --name $(CLUSTER_NAME)
 
-kind-load-%-extended:
-	kind load docker-image $(IMAGE_REPO)/$*:$(VERSION)-extended --name $(CLUSTER_NAME)
-
-
 # Build and push an updated image into kind
 kind-reload-%: %-docker kind-load-% ## reload an image in a kubernetes cluster, flags are (IMAGE_REPO, VERSION, INSTALL_NAMESPACE , CLUSTER_NAME)
 	kubectl rollout restart deployment/$* -n $(INSTALL_NAMESPACE)
