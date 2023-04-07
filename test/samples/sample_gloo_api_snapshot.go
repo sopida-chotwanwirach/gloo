@@ -239,6 +239,9 @@ func SimpleGlooSnapshot(namespace string) *v1snap.ApiSnapshot {
 	}
 }
 
+// This function creates a snapshot based off the SimpleGlooSnapshot
+// that contains an additional proxy and gateway.
+// Used for testing.
 func TwoProxyGlooSnapshot(namespace string) *v1snap.ApiSnapshot {
 	baseSnaphot := SimpleGlooSnapshot(namespace)
 	baseSnaphot.Gateways = append(baseSnaphot.Gateways, defaults.NamedGateway(namespace, "gateway-proxy-2"))

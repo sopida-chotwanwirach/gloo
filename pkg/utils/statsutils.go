@@ -44,9 +44,20 @@ func MakeCounter(name, description string, aggregation *view.Aggregation, tagKey
 
 	return counter
 }
+func MeasureZeroGuarded(ctx context.Context, counter *stats.Int64Measure, dryRun bool, tags ...tag.Mutator) {
+	if !dryRun {
+		MeasureZero(ctx, counter, tags...)
+	}
+}
 
 func MeasureZero(ctx context.Context, counter *stats.Int64Measure, tags ...tag.Mutator) {
 	Measure(ctx, counter, 0, tags...)
+}
+
+func MeasureOneGuarded(ctx context.Context, counter *stats.Int64Measure, dryRun bool, tags ...tag.Mutator) {
+	if !dryRun {
+		MeasureOne(ctx, counter, tags...)
+	}
 }
 
 func MeasureOne(ctx context.Context, counter *stats.Int64Measure, tags ...tag.Mutator) {
