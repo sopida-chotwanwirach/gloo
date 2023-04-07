@@ -55,8 +55,8 @@ var _ = Describe("Validator", func() {
 			ExtensionValidator: extensionValidator,
 			AllowWarnings:      false,
 		})
-		mValidConfig = utils.MakeGauge("validation.gateway.solo.io/valid_config", "A boolean indicating whether gloo config is valid, Unreliable when there are multiple proxies, please use proxy_valid_config")
-		mProxyValidConfig = utils.MakeGauge("validation.gateway.solo.io/proxy_valid_config", "A boolean indicating whether gloo config is valid", syncerstats.ProxyNameKey)
+		mValidConfig = utils.MakeGauge(ValidConfigGaugeName, ValidConfigGaugeDesc)
+		mProxyValidConfig = utils.MakeGauge(ValidProxyConfigGaugeName, ValidProxyConfigGaugeDesc, syncerstats.ProxyNameKey)
 	})
 
 	It("returns error before sync called", func() {

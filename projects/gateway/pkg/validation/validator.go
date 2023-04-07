@@ -53,6 +53,13 @@ func (r *Reports) GetProxies() []*gloov1.Proxy {
 type ProxyReports []*validation.ProxyReport
 type UpstreamReports []*validation.ResourceReport
 
+const (
+	ValidConfigGaugeDesc      = "A boolean indicating whether gloo config is valid, Unreliable when there are multiple proxies, please use proxy_valid_config"
+	ValidConfigGaugeName      = "validation.gateway.solo.io/valid_config"
+	ValidProxyConfigGaugeDesc = "A boolean indicating whether gloo config is valid for the proxy"
+	ValidProxyConfigGaugeName = "validation.gateway.solo.io/proxy_valid_config"
+)
+
 var (
 	NotReadyErr                    = errors.Errorf("validation is not yet available. Waiting for first snapshot")
 	HasNotReceivedFirstSync        = eris.New("proxy validation called before the validation server received its first sync of resources")
@@ -74,13 +81,8 @@ var (
 		return errors.Wrapf(err, "failed to validate Proxy [namespace: %s, name: %s] with gloo validation", proxy.GetMetadata().GetNamespace(), proxy.GetMetadata().GetName())
 	}
 
-	mValidConfig = utils2.MakeGauge("validation.gateway.solo.io/valid_config",
-		"A boolean indicating whether gloo config is valid, Unreliable when there are multiple proxies, please use proxy_valid_config")
-
-	mProxyValidConfig = utils2.MakeGauge("validation.gateway.solo.io/proxy_valid_config",
-		"A boolean indicating whether gloo config is valid for the proxy",
-		syncerstats.ProxyNameKey,
-	)
+	mValidConfig      = utils2.MakeGauge(ValidConfigGaugeName, ValidConfigGaugeDesc)
+	mProxyValidConfig = utils2.MakeGauge(ValidProxyConfigGaugeName, ValidProxyConfigGaugeDesc, syncerstats.ProxyNameKey)
 )
 
 const (
