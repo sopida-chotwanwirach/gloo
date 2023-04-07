@@ -252,7 +252,7 @@ func TwoProxyGlooSnapshot(namespace string) *v1snap.ApiSnapshot {
 			Name:      "test-2",
 			Namespace: "gloo-system",
 		},
-		Listeners: existingProxy.Listeners,
+		Listeners: existingProxy.GetListeners(),
 	}
 	baseSnaphot.Proxies = append(baseSnaphot.Proxies, proxy)
 
