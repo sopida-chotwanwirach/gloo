@@ -240,180 +240,21 @@ func SimpleGlooSnapshot(namespace string) *v1snap.ApiSnapshot {
 }
 
 func TwoProxyGlooSnapshot(namespace string) *v1snap.ApiSnapshot {
-	secret := SimpleSecret()
-	us := UpstreamWithSecret(secret)
-	routes := []*v1.Route{{
-		Action: &v1.Route_RouteAction{
-			RouteAction: &v1.RouteAction{
-				Destination: &v1.RouteAction_Single{
-					Single: &v1.Destination{
-						DestinationType: &v1.Destination_Upstream{
-							Upstream: us.GetMetadata().Ref(),
-						},
-					},
-				},
-			},
-		},
-	}}
+	baseSnaphot := SimpleGlooSnapshot(namespace)
+	baseSnaphot.Gateways = append(baseSnaphot.Gateways, defaults.NamedGateway(namespace, "gateway-proxy-2"))
 
-	httpListener := &v1.Listener{
-		Name:        "http-listener",
-		BindAddress: "127.0.0.1",
-		BindPort:    80,
-		ListenerType: &v1.Listener_HttpListener{
-			HttpListener: &v1.HttpListener{
-				VirtualHosts: []*v1.VirtualHost{{
-					Name:    "virt1",
-					Domains: []string{"*"},
-					Routes:  routes,
-				}},
-			},
-		},
-	}
-	tcpListener := &v1.Listener{
-		Name:        "tcp-listener",
-		BindAddress: "127.0.0.1",
-		BindPort:    8080,
-		ListenerType: &v1.Listener_TcpListener{
-			TcpListener: &v1.TcpListener{
-				TcpHosts: []*v1.TcpHost{
-					{
-						Destination: &v1.TcpHost_TcpAction{
-							Destination: &v1.TcpHost_TcpAction_Single{
-								Single: &v1.Destination{
-									DestinationType: &v1.Destination_Upstream{
-										Upstream: &core.ResourceRef{
-											Name:      "test",
-											Namespace: namespace,
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-	hybridListener := &v1.Listener{
-		Name:        "hybrid-listener",
-		BindAddress: "127.0.0.1",
-		BindPort:    8081,
-		ListenerType: &v1.Listener_HybridListener{
-			HybridListener: &v1.HybridListener{
-				MatchedListeners: []*v1.MatchedListener{
-					{
-						ListenerType: &v1.MatchedListener_HttpListener{
-							HttpListener: &v1.HttpListener{
-								VirtualHosts: []*v1.VirtualHost{{
-									Name:    "virt1",
-									Domains: []string{"*"},
-									Routes:  routes,
-								}},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	aggregateListener := &v1.Listener{
-		Name:        "aggregate-listener",
-		BindAddress: "127.0.0.1",
-		BindPort:    8082,
-		ListenerType: &v1.Listener_AggregateListener{
-			AggregateListener: &v1.AggregateListener{
-				HttpResources: &v1.AggregateListener_HttpResources{
-					VirtualHosts: map[string]*v1.VirtualHost{
-						"virt1": {
-							Name:    "virt1",
-							Domains: []string{"*"},
-							Routes:  routes,
-						},
-					},
-					HttpOptions: map[string]*v1.HttpListenerOptions{
-						"opts1": {
-							HttpConnectionManagerSettings: &hcm.HttpConnectionManagerSettings{},
-						},
-					},
-				},
-				HttpFilterChains: []*v1.AggregateListener_HttpFilterChain{{
-					HttpOptionsRef:  "opts1",
-					VirtualHostRefs: []string{"virt1"},
-				}},
-			},
-		},
-	}
-
+	existingProxy := baseSnaphot.Proxies[0]
 	proxy := &v1.Proxy{
-		Metadata: &core.Metadata{
-			Name:      "test",
-			Namespace: "gloo-system",
-		},
-		Listeners: []*v1.Listener{
-			httpListener,
-			tcpListener,
-			hybridListener,
-			aggregateListener,
-		},
-	}
-
-	proxy2 := &v1.Proxy{
 		Metadata: &core.Metadata{
 			Name:      "test-2",
 			Namespace: "gloo-system",
 		},
-		Listeners: []*v1.Listener{
-			httpListener,
-			tcpListener,
-			hybridListener,
-			aggregateListener,
-		},
+		Listeners: existingProxy.Listeners,
 	}
+	baseSnaphot.Proxies = append(baseSnaphot.Proxies, proxy)
 
-	return &v1snap.ApiSnapshot{
-		Proxies:   []*v1.Proxy{proxy, proxy2},
-		Upstreams: []*v1.Upstream{us},
-		Secrets:   []*v1.Secret{secret},
-		Gateways: []*gwv1.Gateway{
-			defaults.DefaultGateway(namespace),
-			defaults.NamedGateway(namespace, "gateway-proxy-2"),
-			defaults.DefaultSslGateway(namespace),
-			defaults.DefaultHybridGateway(namespace),
-			{
-				Metadata: &core.Metadata{
-					Name:      "tcp-gateway",
-					Namespace: namespace,
-				},
-				ProxyNames: []string{defaults.GatewayProxyName},
-				GatewayType: &gwv1.Gateway_TcpGateway{
-					TcpGateway: &gwv1.TcpGateway{
-						TcpHosts: []*v1.TcpHost{
-							{
-								Name: "tcp-dest",
-								Destination: &v1.TcpHost_TcpAction{
-									Destination: &v1.TcpHost_TcpAction_Single{
-										Single: &v1.Destination{
-											DestinationType: &v1.Destination_Upstream{
-												Upstream: us.GetMetadata().Ref(),
-											},
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-				BindAddress:   "::",
-				BindPort:      12345,
-				UseProxyProto: &wrappers.BoolValue{Value: false},
-			},
-		},
-		VirtualServices: []*gwv1.VirtualService{
-			SimpleVS(namespace, "virtualservice", "*", us.GetMetadata().Ref()),
-		},
-	}
+	return baseSnaphot
+
 }
 
 func SimpleVS(namespace, name, domain string, upstreamRef *core.ResourceRef) *gwv1.VirtualService {
