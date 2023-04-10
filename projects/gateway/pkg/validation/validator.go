@@ -555,10 +555,6 @@ func measureValidConfigInit(ctx context.Context, gatewaysByProxy map[string]v1.G
 	}
 }
 
-func measureInvalidConfig(ctx context.Context, gatewaysByProxy map[string]v1.GatewayList) {
-	utils2.MeasureZero(ctx, mValidConfig)
-}
-
 func measureInvalidConfigProxy(ctx context.Context, proxyName string, dryRun bool) {
 	if !dryRun {
 		utils2.MeasureZero(ctx, mProxyValidConfig, tag.Insert(syncerstats.ProxyNameKey, proxyName))
