@@ -6097,7 +6097,7 @@ spec:
 
 						foundDevModePort := false
 						for _, port := range ports {
-							if port.Name == "gloo-dev-admin" && port.ContainerPort == 10010 {
+							if port.Name == "dev-admin" && port.ContainerPort == 10010 {
 								foundDevModePort = true
 							}
 						}

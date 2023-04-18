@@ -206,7 +206,7 @@ spec:
         {{- end }}
         {{- if .Values.settings.devMode }}
         - containerPort: 10010
-          name: gloo-dev-admin
+          name: dev-admin
           protocol: TCP
         {{- end }}
         volumeMounts:

@@ -284,16 +284,16 @@ observability:
 
 ### Dev Mode and Gloo Admin
 In non-production environments `settings.devMode` can be set to `true` to enable a debug endpoint on the gloo deployment on port `10010`. If this flag set at install time, the port will be exposed automatically. To set it on an existing installation:
-* Enable in the settings crd:
+* Enable in the settings CR:
 ```
 spec:
   devMode: true
 ``` 
-* Expose the port in the gloo deployment crd by adding the existing list of ports in the gloo deployment image definition:
+* Expose the port in the gloo deployment CR by adding the existing list of ports in the gloo deployment image definition:
 ```
       - ports
         - containerPort: 10010
-          name: gloo-dev-admin
+          name: dev-admin
           protocol: TCP
 ```
 * Enable port forwarding:
