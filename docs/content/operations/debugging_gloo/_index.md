@@ -282,7 +282,7 @@ observability:
     logLevel: error
 ```
 
-### Dev Mode and Gloo Admin
+### Dev Mode and Gloo Debug Endpoint
 In non-production environments `settings.devMode` can be set to `true` to enable a debug endpoint on the gloo deployment on port `10010`. If this flag set at install time, the port will be exposed automatically. To set it on an existing installation:
 * Enable in the settings CR:
 ```
