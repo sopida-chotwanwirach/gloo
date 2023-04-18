@@ -1,3 +1,4 @@
 changelog:
-  - type: NON_USER_FACING
-    description: Setup helm for dev mode
+  - type: NEW_FEATURE
+    description: Expose `settings.devMode` in the helm templates and expose gloo debug port when set to true at install time
+    issueLink: https://github.com/solo-io/solo-projects/issues/4169
