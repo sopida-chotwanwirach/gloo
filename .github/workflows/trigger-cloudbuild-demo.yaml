@@ -19,7 +19,7 @@ jobs:
       - name: Setup - gcloud / gsutil
         uses: 'google-github-actions/auth@v0'
         with:
-          credentials_json: '${{ secrets.GCR_GLOO_EDGE_GHA_SA_JSON_KEY }}'
+          credentials_json: '${{ secrets.GC_FIREBASE_GHA_SA_JSON_KEY }}'
       - name: Setup Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v0
         with:
