@@ -26,4 +26,4 @@ jobs:
           project_id: solo-public
       - name: 'Start Google Cloud Build trigger'
         run: |
-          gcloud builds submit --config=./../../ci/cloudbuild/run-tests.yaml --substitutions COMMIT_SHA=${{ env.COMMIT_SHA }},REPO_NAME=${{ env.REPO_NAME }},TAG_NAME=${{ env.TAG_NAME }},_PR_NUM=${{ env._PR_NUM }};
+          gcloud builds submit --config=./ci/cloudbuild/run-tests.yaml --substitutions COMMIT_SHA=${{ env.COMMIT_SHA }},REPO_NAME=${{ env.REPO_NAME }},TAG_NAME=${{ env.TAG_NAME }},_PR_NUM=${{ env._PR_NUM }};
