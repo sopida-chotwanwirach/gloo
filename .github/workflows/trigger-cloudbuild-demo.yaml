@@ -1,0 +1,29 @@
+name: LOCAL TESTING
+
+on:
+  pull_request:
+
+env:
+  COMMIT_SHA: "main"
+  REPO_NAME: "gloo"
+  TAG_NAME: ""
+  _PR_NUM: 123
+
+job:
+  run_cloudbuild_tests:
+    name: Trigger Google Cloud Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ./.github/workflows/composite-actions/prep-go-runner
+      - name: Setup - gcloud / gsutil
+        uses: 'google-github-actions/auth@v0'
+        with:
+          credentials_json: '${{ secrets.GLOO_VULN_REPORTER }}'
+      - name: Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v0
+        with:
+          project_id: solo-public
+      - name: 'Start Google Cloud Build trigger'
+        run: |
+          gcloud builds submit --config=./../../ci/cloudbuild/run-tests.yaml --substitutions COMMIT_SHA=${{ env.COMMIT_SHA }},REPO_NAME=${{ env.REPO_NAME }},TAG_NAME=${{ env.TAG_NAME }},_PR_NUM=${{ env._PR_NUM }};
