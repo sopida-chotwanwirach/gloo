@@ -23,7 +23,8 @@ jobs:
       - name: Setup Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v0
         with:
-          project_id: solo-test-236622
+          # TODO: What I think we need is creds (via a secret) for the solo-test project
+          project_id: gloo-edge
       - name: 'Start Google Cloud Build trigger'
         run: |
           gcloud builds submit --config=./ci/cloudbuild/run-tests.yaml --substitutions COMMIT_SHA=${{ env.COMMIT_SHA }},REPO_NAME=${{ env.REPO_NAME }},TAG_NAME=${{ env.TAG_NAME }},_PR_NUM=${{ env._PR_NUM }};
