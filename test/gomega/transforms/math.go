@@ -20,10 +20,42 @@ func NinetyPercentile(upperBound time.Duration) types.GomegaMatcher {
     return gomega.WithTransform(WithPercentile(90), gomega.BeNumerically("<", upperBound))
 }
 
+func Median(upperBound time.Duration) types.GomegaMatcher {
+    return gomega.WithTransform(WithPercentile(50), gomega.BeNumerically("<", upperBound))
+}
+
 func exampleTest() {
     var durations []time.Duration
 
-    gomega.Expect(durations).To(NinetyPercentile(time.Millisecond * 100))
+    type entry struct {
+        name      string
+        frequency int
+
+        benchmarkAssertions []types.GomegaMatcher
+    }
+
+    var entries = []entry{
+        {
+            name:      "100",
+            frequency: 100,
+            benchmarkAssertions: []types.GomegaMatcher{
+                Median(time.Millisecond * 10),
+                NinetyPercentile(time.Millisecond * 100),
+            },
+        },
+        {
+            name:      "1000",
+            frequency: 1000,
+            benchmarkAssertions: []types.GomegaMatcher{
+                Median(time.Millisecond * 100),
+                NinetyPercentile(time.Millisecond * 1000),
+            },
+        },
+    }
+
+    for _, entry := range entries {
+        gomega.Expect(durations).Should(gomega.And(entry.benchmarkAssertions...))
+    }
 }
 
 
