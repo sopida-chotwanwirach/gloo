@@ -16,8 +16,6 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/solo-io/gloo/projects/gloo/pkg/defaults"
-
 	"github.com/onsi/ginkgo/v2"
 
 	errors "github.com/rotisserie/eris"
@@ -224,9 +222,10 @@ func (ei *Instance) Clean() {
 
 func (ei *Instance) runContainer(ctx context.Context) error {
 	args := []string{"run", "--rm", "--name", containerName,
-		"-p", fmt.Sprintf("%d:%d", defaults.HttpPort, defaults.HttpPort),
-		"-p", fmt.Sprintf("%d:%d", defaults.HttpsPort, defaults.HttpsPort),
-		"-p", fmt.Sprintf("%d:%d", defaults.HybridPort, defaults.HybridPort),
+		"-p", fmt.Sprintf("%d:%d", HttpPort, HttpPort),
+		"-p", fmt.Sprintf("%d:%d", HttpsPort, HttpsPort),
+		"-p", fmt.Sprintf("%d:%d", TcpPort, TcpPort),
+		"-p", fmt.Sprintf("%d:%d", HybridPort, HybridPort),
 		"-p", fmt.Sprintf("%d:%d", ei.AdminPort, ei.AdminPort),
 	}
 

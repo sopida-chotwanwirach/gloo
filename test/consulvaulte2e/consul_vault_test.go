@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/solo-io/gloo/test/services/envoy"
 	"os"
 	"path/filepath"
 	"time"
@@ -73,8 +74,7 @@ var _ = Describe("Consul + Vault Configuration Happy Path e2e", func() {
 		restXdsPort = int(services.AllocateGlooPort())
 		proxyDebugPort = int(services.AllocateGlooPort())
 
-		defaults.HttpPort = services.NextBindPort()
-		defaults.HttpsPort = services.NextBindPort()
+		envoy.AdvanceRequestPorts()
 
 		// Start Consul
 		consulInstance, err = consulFactory.NewConsulInstance()
@@ -222,7 +222,7 @@ var _ = Describe("Consul + Vault Configuration Happy Path e2e", func() {
 			return proxyClient.Read(writeNamespace, gatewaydefaults.GatewayProxyName, clients.ReadOpts{Ctx: ctx})
 		}, "60s", ".2s")
 
-		v1helpers.TestUpstreamReachable(defaults.HttpsPort, svc1, &cert)
+		v1helpers.TestUpstreamReachable(envoy.HttpsPort, svc1, &cert)
 	})
 	It("can do function routing with consul services", func() {
 
@@ -244,7 +244,7 @@ var _ = Describe("Consul + Vault Configuration Happy Path e2e", func() {
 			return proxyClient.Read(writeNamespace, gatewaydefaults.GatewayProxyName, clients.ReadOpts{Ctx: ctx})
 		}, "60s", ".2s")
 
-		v1helpers.ExpectHttpOK(nil, nil, defaults.HttpPort,
+		v1helpers.ExpectHttpOK(nil, nil, envoy.HttpPort,
 			`[{"id":1,"name":"Dog","status":"available"},{"id":2,"name":"Cat","status":"pending"}]
 `)
 	})

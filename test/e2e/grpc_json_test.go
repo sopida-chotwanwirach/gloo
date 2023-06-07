@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"github.com/solo-io/gloo/test/services/envoy"
 	"net/http"
 	"os"
 
@@ -44,8 +45,7 @@ var _ = Describe("GRPC to JSON Transcoding Plugin - Envoy API", func() {
 	format.MaxLength = 0
 	BeforeEach(func() {
 		ctx, cancel = context.WithCancel(context.Background())
-		defaults.HttpPort = services.NextBindPort()
-		defaults.HttpsPort = services.NextBindPort()
+		envoy.AdvanceRequestPorts()
 
 		var err error
 		envoyInstance, err = envoyFactory.NewEnvoyInstance()
@@ -229,7 +229,7 @@ func getGrpcJsonGateway() *gatewayv1.Gateway {
 
 	return &gatewayv1.Gateway{
 		BindAddress:        "::",
-		BindPort:           defaults.HttpPort,
+		BindPort:           envoy.HttpPort,
 		NamespacedStatuses: &core.NamespacedStatuses{},
 		Metadata: &core.Metadata{
 			Name:      "gateway-proxy",

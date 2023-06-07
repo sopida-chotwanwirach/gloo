@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/solo-io/gloo/test/services/envoy"
 	"io"
 	"net/http"
 	"regexp"
@@ -31,7 +32,6 @@ import (
 	gwdefaults "github.com/solo-io/gloo/projects/gateway/pkg/defaults"
 	gloov1 "github.com/solo-io/gloo/projects/gloo/pkg/api/v1"
 	"github.com/solo-io/gloo/projects/gloo/pkg/api/v1/core/matchers"
-	"github.com/solo-io/gloo/projects/gloo/pkg/defaults"
 	"github.com/solo-io/gloo/projects/gloo/pkg/translator"
 	. "github.com/solo-io/gloo/test/gomega"
 	"github.com/solo-io/gloo/test/services"
@@ -56,8 +56,7 @@ var _ = Describe("Health Checks", func() {
 		)
 
 		ctx, cancel = context.WithCancel(context.Background())
-		defaults.HttpPort = services.NextBindPort()
-		defaults.HttpsPort = services.NextBindPort()
+		envoy.AdvanceRequestPorts()
 
 		var err error
 		envoyInstance, err = envoyFactory.NewEnvoyInstance()
@@ -99,7 +98,7 @@ var _ = Describe("Health Checks", func() {
 			// send a request with a body
 			var buf bytes.Buffer
 			buf.Write(b)
-			res, err := http.Post(fmt.Sprintf("http://%s:%d/test", "localhost", defaults.HttpPort), "application/json", &buf)
+			res, err := http.Post(fmt.Sprintf("http://%s:%d/test", "localhost", envoy.HttpPort), "application/json", &buf)
 			if err != nil {
 				return "", err
 			}

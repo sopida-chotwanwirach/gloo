@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"github.com/solo-io/gloo/test/services/envoy"
 	"io"
 	"net"
 	"net/http"
@@ -67,15 +68,14 @@ var _ = Describe("Happy path", func() {
 
 	BeforeEach(func() {
 		ctx, cancel = context.WithCancel(context.Background())
-		defaults.HttpPort = services.NextBindPort()
-		defaults.HttpsPort = services.NextBindPort()
+		envoy.AdvanceRequestPorts()
 
 		var err error
 		envoyInstance, err = envoyFactory.NewEnvoyInstance()
 		Expect(err).NotTo(HaveOccurred())
 
 		tu = v1helpers.NewTestHttpUpstream(ctx, envoyInstance.LocalAddr())
-		envoyPort = defaults.HttpPort
+		envoyPort = envoy.HttpPort
 	})
 
 	AfterEach(func() {
@@ -197,7 +197,7 @@ var _ = Describe("Happy path", func() {
 					TestUpstreamReachable()
 
 					// This will hit the virtual host with the above virtual cluster config
-					response, err := http.Get(fmt.Sprintf("http://%s:%d/", "localhost", defaults.HttpPort))
+					response, err := http.Get(fmt.Sprintf("http://%s:%d/", "localhost", envoy.HttpPort))
 					Expect(err).NotTo(HaveOccurred())
 					Expect(response.Header).NotTo(HaveKey("X-Envoy-Upstream-Service-Time"))
 
@@ -222,7 +222,7 @@ var _ = Describe("Happy path", func() {
 					TestUpstreamReachable()
 
 					// This will hit the virtual host with the above virtual cluster config
-					response, err := http.Get(fmt.Sprintf("http://%s:%d/", "localhost", defaults.HttpPort))
+					response, err := http.Get(fmt.Sprintf("http://%s:%d/", "localhost", envoy.HttpPort))
 					Expect(err).NotTo(HaveOccurred())
 					Expect(response.Header).To(HaveKey("X-Envoy-Upstream-Service-Time"))
 

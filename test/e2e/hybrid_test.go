@@ -3,6 +3,7 @@ package e2e_test
 import (
 	"errors"
 	"fmt"
+	"github.com/solo-io/gloo/test/services/envoy"
 	"io"
 	"net"
 	"net/http"
@@ -10,7 +11,6 @@ import (
 
 	"math/rand"
 
-	"github.com/solo-io/gloo/projects/gloo/pkg/defaults"
 	"github.com/solo-io/gloo/test/gomega/matchers"
 	gloohelpers "github.com/solo-io/gloo/test/helpers"
 	"github.com/solo-io/gloo/test/testutils"
@@ -157,7 +157,7 @@ func (gt *GwTester) makeARequest(testContext *e2e.TestContext, srcip net.IP, sni
 	if srcip == nil {
 		srcip = net.ParseIP("127.0.0.1")
 	}
-	requestBuilder := testContext.GetHttpRequestBuilder().WithScheme("https").WithPort(defaults.HybridPort)
+	requestBuilder := testContext.GetHttpRequestBuilder().WithScheme("https").WithPort(envoy.HybridPort)
 	proxyProtocolBytes = []byte("PROXY TCP4 " + srcip.String() + " 1.2.3.4 123 123\r\n")
 	client := testutils.DefaultClientBuilder().
 		WithTLSRootCa(gloohelpers.Certificate()).
@@ -235,7 +235,7 @@ var _ = Describe("Hybrid Gateway", func() {
 		})
 
 		It("http request works as expected", func() {
-			requestBuilder := testContext.GetHttpRequestBuilder().WithPort(defaults.HybridPort)
+			requestBuilder := testContext.GetHttpRequestBuilder().WithPort(envoy.HybridPort)
 			Eventually(func(g Gomega) {
 				g.Expect(testutils.DefaultHttpClient.Do(requestBuilder.Build())).Should(matchers.HaveOkResponse())
 			}, "5s", "0.5s").Should(Succeed())
@@ -278,7 +278,7 @@ var _ = Describe("Hybrid Gateway", func() {
 		})
 
 		It("http request works as expected", func() {
-			requestBuilder := testContext.GetHttpRequestBuilder().WithPort(defaults.HybridPort)
+			requestBuilder := testContext.GetHttpRequestBuilder().WithPort(envoy.HybridPort)
 			Eventually(func(g Gomega) {
 				g.Expect(testutils.DefaultHttpClient.Do(requestBuilder.Build())).Should(matchers.HaveOkResponse())
 			}, "5s", "0.5s").Should(Succeed())
@@ -316,7 +316,7 @@ var _ = Describe("Hybrid Gateway", func() {
 		})
 
 		It("http request fails", func() {
-			requestBuilder := testContext.GetHttpRequestBuilder().WithPort(defaults.HybridPort)
+			requestBuilder := testContext.GetHttpRequestBuilder().WithPort(envoy.HybridPort)
 			Consistently(func(g Gomega) {
 				_, err := testutils.DefaultHttpClient.Do(requestBuilder.Build())
 				g.Expect(err).Should(HaveOccurred())

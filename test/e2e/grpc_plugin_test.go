@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"github.com/solo-io/gloo/test/services/envoy"
 	"io"
 	"net/http"
 	"os"
@@ -45,10 +46,8 @@ var _ = Describe("GRPC to JSON Transcoding Plugin - Gloo API", func() {
 	)
 
 	BeforeEach(func() {
-
 		ctx, cancel = context.WithCancel(context.Background())
-		defaults.HttpPort = services.NextBindPort()
-		defaults.HttpsPort = services.NextBindPort()
+		envoy.AdvanceRequestPorts()
 
 		var err error
 		envoyInstance, err = envoyFactory.NewEnvoyInstance()
@@ -95,7 +94,7 @@ var _ = Describe("GRPC to JSON Transcoding Plugin - Gloo API", func() {
 			// send a request with a body
 			var buf bytes.Buffer
 			buf.Write(b)
-			res, err := http.Post(fmt.Sprintf("http://%s:%d/test", "localhost", defaults.HttpPort), "application/json", &buf)
+			res, err := http.Post(fmt.Sprintf("http://%s:%d/test", "localhost", envoy.HttpPort), "application/json", &buf)
 			if err != nil {
 				return "", err
 			}

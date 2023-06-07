@@ -3,6 +3,7 @@ package e2e_test
 import (
 	"context"
 	"fmt"
+	"github.com/solo-io/gloo/test/services/envoy"
 	"html"
 	"io"
 	"net/http"
@@ -31,8 +32,6 @@ import (
 	. "github.com/solo-io/gloo/test/gomega"
 
 	"github.com/solo-io/gloo/test/services"
-
-	"github.com/solo-io/gloo/projects/gloo/pkg/defaults"
 )
 
 const (
@@ -52,8 +51,7 @@ var _ = Describe("Tracing config loading", func() {
 
 	BeforeEach(func() {
 		ctx, cancel = context.WithCancel(context.Background())
-		defaults.HttpPort = services.NextBindPort()
-		defaults.HttpsPort = services.NextBindPort()
+		envoy.AdvanceRequestPorts()
 
 		var err error
 		envoyInstance, err = envoyFactory.NewEnvoyInstance()
@@ -74,7 +72,7 @@ var _ = Describe("Tracing config loading", func() {
 		})
 
 		It("should send trace msgs to the zipkin server", func() {
-			err := envoyInstance.RunWithConfigFile(int(defaults.HttpPort), "./envoyconfigs/zipkin-envoy-conf.yaml")
+			err := envoyInstance.RunWithConfigFile(int(envoy.HttpPort), "./envoyconfigs/zipkin-envoy-conf.yaml")
 			Expect(err).NotTo(HaveOccurred())
 
 			// Start a dummy server listening on 9411 for Zipkin requests
@@ -199,7 +197,7 @@ var _ = Describe("Tracing config loading", func() {
 				0,
 				v1helpers.CurlRequest{
 					RootCA: nil,
-					Port:   defaults.HttpPort,
+					Port:   envoy.HttpPort,
 					Host:   "test.com", // to match the vs-test
 					Path:   "/",
 					Body:   []byte("solo.io test"),
@@ -245,7 +243,7 @@ var _ = Describe("Tracing config loading", func() {
 			)
 			Expect(err).NotTo(HaveOccurred())
 
-			testRequest := createRequestWithTracingEnabled("localhost", defaults.HttpPort)
+			testRequest := createRequestWithTracingEnabled("localhost", envoy.HttpPort)
 			Eventually(func(g Gomega) {
 				g.Eventually(testRequest, DefaultEventuallyTimeout, DefaultEventuallyPollingInterval).Should(BeEmpty())
 				g.Eventually(collectorApiHit, DefaultEventuallyTimeout, DefaultEventuallyPollingInterval).Should(Receive())
@@ -286,7 +284,7 @@ var _ = Describe("Tracing config loading", func() {
 			)
 			Expect(err).NotTo(HaveOccurred())
 
-			testRequest := createRequestWithTracingEnabled("localhost", defaults.HttpPort)
+			testRequest := createRequestWithTracingEnabled("localhost", envoy.HttpPort)
 			Eventually(func(g Gomega) {
 				g.Eventually(testRequest, DefaultEventuallyTimeout, DefaultEventuallyPollingInterval).Should(BeEmpty())
 				g.Eventually(collectorApiHit, DefaultEventuallyTimeout, DefaultEventuallyPollingInterval).Should(Receive())
@@ -316,7 +314,7 @@ var _ = Describe("Tracing config loading", func() {
 			)
 			Expect(err).NotTo(HaveOccurred())
 
-			testRequest := createRequestWithTracingEnabled("localhost", defaults.HttpPort)
+			testRequest := createRequestWithTracingEnabled("localhost", envoy.HttpPort)
 			Eventually(func(g Gomega) {
 				g.Eventually(testRequest, DefaultEventuallyTimeout, DefaultEventuallyPollingInterval).Should(BeEmpty())
 				g.Eventually(collectorApiHit, DefaultEventuallyTimeout, DefaultEventuallyPollingInterval).Should(Not(Receive()))
@@ -359,7 +357,7 @@ var _ = Describe("Tracing config loading", func() {
 			)
 			Expect(err).NotTo(HaveOccurred())
 
-			testRequest := createRequestWithTracingEnabled("localhost", defaults.HttpPort)
+			testRequest := createRequestWithTracingEnabled("localhost", envoy.HttpPort)
 			Eventually(func(g Gomega) {
 				g.Eventually(testRequest, DefaultEventuallyTimeout, DefaultEventuallyPollingInterval).Should(BeEmpty())
 				g.Eventually(collectorApiHit, DefaultEventuallyTimeout, DefaultEventuallyPollingInterval).Should(Receive())
@@ -402,7 +400,7 @@ var _ = Describe("Tracing config loading", func() {
 			)
 			Expect(err).NotTo(HaveOccurred())
 
-			testRequest := createRequestWithTracingEnabled("localhost", defaults.HttpPort)
+			testRequest := createRequestWithTracingEnabled("localhost", envoy.HttpPort)
 			Eventually(func(g Gomega) {
 				g.Eventually(testRequest, DefaultEventuallyTimeout, DefaultEventuallyPollingInterval).Should(BeEmpty())
 				g.Eventually(collectorApiHit, DefaultEventuallyTimeout, DefaultEventuallyPollingInterval).Should(Receive())

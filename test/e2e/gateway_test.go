@@ -3,6 +3,7 @@ package e2e_test
 import (
 	"context"
 	"fmt"
+	"github.com/solo-io/gloo/test/services/envoy"
 	"net/http"
 	"time"
 
@@ -50,10 +51,7 @@ var _ = Describe("Gateway", func() {
 
 	BeforeEach(func() {
 		ctx, cancel = context.WithCancel(context.Background())
-		defaults.HttpPort = services.NextBindPort()
-		defaults.HttpsPort = services.NextBindPort()
-		defaults.TcpPort = services.NextBindPort()
-		defaults.HybridPort = services.NextBindPort()
+		envoy.AdvanceRequestPorts()
 	})
 
 	AfterEach(func() {
@@ -160,7 +158,7 @@ var _ = Describe("Gateway", func() {
 					Expect(proxy.Listeners).To(HaveLen(2))
 					var nonSslListener gloov1.Listener
 					for _, l := range proxy.Listeners {
-						if l.BindPort == defaults.HttpPort {
+						if l.BindPort == envoy.HttpPort {
 							nonSslListener = *l
 							break
 						}
@@ -317,7 +315,7 @@ var _ = Describe("Gateway", func() {
 				)
 
 				TestUpstreamReachable := func() {
-					v1helpers.TestUpstreamReachable(defaults.HttpPort, testUpstream, nil)
+					v1helpers.TestUpstreamReachable(envoy.HttpPort, testUpstream, nil)
 				}
 
 				BeforeEach(func() {
@@ -412,7 +410,7 @@ var _ = Describe("Gateway", func() {
 					}, "10s", "0.1s").Should(BeTrue())
 
 					// Create a regular request
-					request, err := http.NewRequest("GET", fmt.Sprintf("http://localhost:%d", defaults.HttpPort), nil)
+					request, err := http.NewRequest("GET", fmt.Sprintf("http://localhost:%d", envoy.HttpPort), nil)
 					Expect(err).NotTo(HaveOccurred())
 					request = request.WithContext(ctx)
 
@@ -434,7 +432,7 @@ var _ = Describe("Gateway", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					// Create a regular request
-					request, err := http.NewRequest("GET", fmt.Sprintf("http://localhost:%d/", defaults.HttpPort), nil)
+					request, err := http.NewRequest("GET", fmt.Sprintf("http://localhost:%d/", envoy.HttpPort), nil)
 					Expect(err).NotTo(HaveOccurred())
 					request = request.WithContext(ctx)
 
@@ -479,7 +477,7 @@ var _ = Describe("Gateway", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					// Create a regular request
-					request, err := http.NewRequest("GET", fmt.Sprintf("http://localhost:%d/", defaults.HttpPort), nil)
+					request, err := http.NewRequest("GET", fmt.Sprintf("http://localhost:%d/", envoy.HttpPort), nil)
 					Expect(err).NotTo(HaveOccurred())
 					request = request.WithContext(context.TODO())
 					request.Header.Add("cluster-header-name", upstreamName)
@@ -526,7 +524,7 @@ var _ = Describe("Gateway", func() {
 
 					TestUpstreamSslReachable := func() {
 						cert := gloohelpers.Certificate()
-						v1helpers.TestUpstreamReachable(defaults.HttpsPort, testUpstream, &cert)
+						v1helpers.TestUpstreamReachable(envoy.HttpsPort, testUpstream, &cert)
 					}
 
 					It("should work with ssl", func() {
@@ -634,7 +632,7 @@ var _ = Describe("Gateway", func() {
 
 				TestUpstreamSslReachableTcp := func() {
 					cert := gloohelpers.Certificate()
-					v1helpers.TestUpstreamReachable(defaults.HttpsPort, tu, &cert)
+					v1helpers.TestUpstreamReachable(envoy.HttpsPort, tu, &cert)
 				}
 
 				It("should work with ssl", func() {
@@ -963,7 +961,7 @@ var _ = Describe("Gateway", func() {
 			Context("http traffic", func() {
 
 				TestUpstreamReachable := func() {
-					v1helpers.TestUpstreamReachable(defaults.HybridPort, testUpstream, nil)
+					v1helpers.TestUpstreamReachable(envoy.HybridPort, testUpstream, nil)
 				}
 
 				It("works when rapid virtual service creation and deletion causes no race conditions", func() {
@@ -1001,7 +999,7 @@ var _ = Describe("Gateway", func() {
 					}, "10s", "0.1s").Should(BeTrue())
 
 					// Create a regular request
-					request, err := http.NewRequest("GET", fmt.Sprintf("http://localhost:%d", defaults.HybridPort), nil)
+					request, err := http.NewRequest("GET", fmt.Sprintf("http://localhost:%d", envoy.HybridPort), nil)
 					Expect(err).NotTo(HaveOccurred())
 					request = request.WithContext(ctx)
 
@@ -1018,7 +1016,7 @@ var _ = Describe("Gateway", func() {
 
 				It("should not match requests that contain a header that is excluded from match", func() {
 					// Create a regular request
-					request, err := http.NewRequest("GET", fmt.Sprintf("http://localhost:%d/", defaults.HybridPort), nil)
+					request, err := http.NewRequest("GET", fmt.Sprintf("http://localhost:%d/", envoy.HybridPort), nil)
 					Expect(err).NotTo(HaveOccurred())
 					request = request.WithContext(ctx)
 
@@ -1069,7 +1067,7 @@ var _ = Describe("Gateway", func() {
 					}, "5s", "0.3s").ShouldNot(HaveOccurred())
 
 					// Create a regular request
-					request, err := http.NewRequest("GET", fmt.Sprintf("http://localhost:%d/", defaults.HybridPort), nil)
+					request, err := http.NewRequest("GET", fmt.Sprintf("http://localhost:%d/", envoy.HybridPort), nil)
 					Expect(err).NotTo(HaveOccurred())
 					request = request.WithContext(context.TODO())
 					request.Header.Add("cluster-header-name", upstreamName)
@@ -1116,7 +1114,7 @@ var _ = Describe("Gateway", func() {
 
 					TestUpstreamSslReachable := func() {
 						cert := gloohelpers.Certificate()
-						v1helpers.TestUpstreamReachable(defaults.HybridPort, testUpstream, &cert)
+						v1helpers.TestUpstreamReachable(envoy.HybridPort, testUpstream, &cert)
 					}
 
 					It("should work with ssl if ssl config is present in matcher", func() {
@@ -1200,7 +1198,7 @@ var _ = Describe("Gateway", func() {
 
 				TestUpstreamSslReachableTcp := func() {
 					cert := gloohelpers.Certificate()
-					v1helpers.TestUpstreamReachable(defaults.HybridPort, testUpstream, &cert)
+					v1helpers.TestUpstreamReachable(envoy.HybridPort, testUpstream, &cert)
 				}
 
 				It("should work with ssl", func() {
@@ -1343,7 +1341,7 @@ func getTrivialVirtualService(ns string) *gatewayv1.VirtualService {
 // that proxy, or nil if it can't be found
 func getNonSSLListener(proxy *gloov1.Proxy) *gloov1.Listener {
 	for _, l := range proxy.Listeners {
-		if l.BindPort == defaults.HttpPort {
+		if l.BindPort == envoy.HttpPort {
 			return l
 		}
 	}

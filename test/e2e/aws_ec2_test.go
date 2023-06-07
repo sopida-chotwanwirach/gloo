@@ -3,6 +3,7 @@ package e2e_test
 import (
 	"context"
 	"fmt"
+	"github.com/solo-io/gloo/test/services/envoy"
 	"io"
 	"net/http"
 	"os"
@@ -19,7 +20,6 @@ import (
 	"github.com/rotisserie/eris"
 	gloov1 "github.com/solo-io/gloo/projects/gloo/pkg/api/v1"
 	glooec2 "github.com/solo-io/gloo/projects/gloo/pkg/api/v1/options/aws/ec2"
-	"github.com/solo-io/gloo/projects/gloo/pkg/defaults"
 	"github.com/solo-io/gloo/test/services"
 	"github.com/solo-io/solo-kit/pkg/api/v1/clients"
 	"github.com/solo-io/solo-kit/pkg/api/v1/resources/core"
@@ -194,7 +194,7 @@ var _ = Describe("AWS EC2 Plugin utils test", func() {
 
 	// NOTE: you need to configure EC2 instances before running this
 	It("be able to call upstream function", func() {
-		err := envoyInstance.RunWithRoleAndRestXds(services.DefaultProxyName, testClients.GlooPort, testClients.RestXdsPort)
+		err := envoyInstance.RunWithRoleAndRestXds(envoy.DefaultProxyName, testClients.GlooPort, testClients.RestXdsPort)
 		Expect(err).NotTo(HaveOccurred())
 
 		proxy := &gloov1.Proxy{
@@ -205,7 +205,7 @@ var _ = Describe("AWS EC2 Plugin utils test", func() {
 			Listeners: []*gloov1.Listener{{
 				Name:        "listener",
 				BindAddress: "::",
-				BindPort:    defaults.HttpPort,
+				BindPort:    envoy.HttpPort,
 				ListenerType: &gloov1.Listener_HttpListener{
 					HttpListener: &gloov1.HttpListener{
 						VirtualHosts: []*gloov1.VirtualHost{{
@@ -238,14 +238,13 @@ var _ = Describe("AWS EC2 Plugin utils test", func() {
 			return testClients.ProxyClient.Read(proxy.Metadata.Namespace, proxy.Metadata.Name, clients.ReadOpts{})
 		})
 
-		validateEc2Endpoint(defaults.HttpPort, "Counts")
+		validateEc2Endpoint(envoy.HttpPort, "Counts")
 	})
 
 	BeforeEach(func() {
 
 		ctx, cancel = context.WithCancel(context.Background())
-		defaults.HttpPort = services.NextBindPort()
-		defaults.HttpsPort = services.NextBindPort()
+		envoy.AdvanceRequestPorts()
 
 		runOptions := &services.RunOptions{
 			NsToWrite: writeNamespace,

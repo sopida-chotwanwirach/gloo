@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
+	"github.com/solo-io/gloo/test/services/envoy"
 	"net/http"
 	"time"
 
@@ -23,10 +24,8 @@ import (
 	v1 "github.com/solo-io/gloo/projects/gateway/pkg/api/v1"
 	gloov1 "github.com/solo-io/gloo/projects/gloo/pkg/api/v1"
 	static_plugin_gloo "github.com/solo-io/gloo/projects/gloo/pkg/api/v1/options/static"
-	"github.com/solo-io/gloo/projects/gloo/pkg/defaults"
 	"github.com/solo-io/gloo/test/e2e"
 	"github.com/solo-io/gloo/test/helpers"
-	"github.com/solo-io/gloo/test/services"
 	"github.com/solo-io/solo-kit/pkg/api/v1/resources/core"
 )
 
@@ -87,7 +86,7 @@ var _ = Describe("Grpc Web", func() {
 		)
 
 		BeforeEach(func() {
-			accessLogPort := services.NextBindPort()
+			accessLogPort := envoy.NextBindPort()
 			grpcUpstream := &gloov1.Upstream{
 				Metadata: &core.Metadata{
 					Name:      "grpc-service",
@@ -169,7 +168,7 @@ var _ = Describe("Grpc Web", func() {
 			var bufferbase64 bytes.Buffer
 			bufferbase64.Write(dest)
 
-			req, err := http.NewRequest("POST", fmt.Sprintf("http://localhost:%d/envoy.service.accesslog.v3.AccessLogService/StreamAccessLogs", defaults.HttpPort), &bufferbase64)
+			req, err := http.NewRequest("POST", fmt.Sprintf("http://localhost:%d/envoy.service.accesslog.v3.AccessLogService/StreamAccessLogs", envoy.HttpPort), &bufferbase64)
 			Expect(err).NotTo(HaveOccurred())
 
 			req.Host = "grpc.com"

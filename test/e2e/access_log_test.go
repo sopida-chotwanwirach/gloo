@@ -2,14 +2,13 @@ package e2e_test
 
 import (
 	"context"
+	"github.com/solo-io/gloo/test/services/envoy"
 	"net/http"
 	"time"
 
 	"github.com/solo-io/gloo/test/testutils"
 
 	"github.com/solo-io/gloo/test/gomega/matchers"
-
-	"github.com/solo-io/gloo/test/services"
 
 	envoy_data_accesslog_v3 "github.com/envoyproxy/go-control-plane/envoy/data/accesslog/v3"
 	v1 "github.com/solo-io/gloo/projects/gateway/pkg/api/v1"
@@ -61,7 +60,7 @@ var _ = Describe("Access Log", func() {
 		)
 
 		BeforeEach(func() {
-			accessLogPort := services.NextBindPort()
+			accessLogPort := envoy.NextBindPort()
 			msgChan = runAccessLog(testContext.Ctx(), accessLogPort)
 			testContext.EnvoyInstance().AccessLogPort = accessLogPort
 

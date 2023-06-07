@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"github.com/solo-io/gloo/test/services/envoy"
 	"io"
 	"net"
 	"net/http"
@@ -33,8 +34,6 @@ import (
 	gatewaydefaults "github.com/solo-io/gloo/projects/gateway/pkg/defaults"
 	"github.com/solo-io/gloo/projects/gloo/pkg/api/v1/ssl"
 	testhelpers "github.com/solo-io/gloo/test/helpers"
-
-	"github.com/solo-io/gloo/projects/gloo/pkg/defaults"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -81,7 +80,7 @@ var _ = Describe("tunneling", func() {
 		tlsHttpConnect = false
 		var err error
 		ctx, cancel = context.WithCancel(context.Background())
-		defaults.HttpPort = services.NextBindPort()
+		envoy.AdvanceRequestPorts()
 
 		// run gloo
 		ro := &services.RunOptions{
@@ -150,7 +149,7 @@ var _ = Describe("tunneling", func() {
 			var json = []byte(requestJsonBody)
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 			defer cancel()
-			req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("http://%s:%d/test", "localhost", defaults.HttpPort), bytes.NewBuffer(json))
+			req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("http://%s:%d/test", "localhost", envoy.HttpPort), bytes.NewBuffer(json))
 			g.Expect(err).NotTo(HaveOccurred())
 			g.Expect(http.DefaultClient.Do(req)).Should(testmatchers.HaveHttpResponse(&testmatchers.HttpResponse{
 				StatusCode: expectedResponseStatusCode,
