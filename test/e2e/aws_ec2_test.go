@@ -72,7 +72,7 @@ var _ = Describe("AWS EC2 Plugin utils test", func() {
 		ctx           context.Context
 		cancel        context.CancelFunc
 		testClients   services.TestClients
-		envoyInstance *services.EnvoyInstance
+		envoyInstance *envoy.Instance
 		secret        *gloov1.Secret
 		upstream      *gloov1.Upstream
 		roleArn       string

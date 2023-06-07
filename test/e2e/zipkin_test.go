@@ -46,7 +46,7 @@ var _ = Describe("Tracing config loading", func() {
 	var (
 		ctx           context.Context
 		cancel        context.CancelFunc
-		envoyInstance *services.EnvoyInstance
+		envoyInstance *envoy.Instance
 	)
 
 	BeforeEach(func() {

@@ -46,7 +46,7 @@ var _ = Describe("Health Checks", func() {
 		ctx           context.Context
 		cancel        context.CancelFunc
 		testClients   services.TestClients
-		envoyInstance *services.EnvoyInstance
+		envoyInstance *envoy.Instance
 		tu            *v1helpers.TestUpstream
 	)
 

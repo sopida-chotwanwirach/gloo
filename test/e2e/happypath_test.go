@@ -40,7 +40,7 @@ var _ = Describe("Happy path", func() {
 		ctx           context.Context
 		cancel        context.CancelFunc
 		testClients   services.TestClients
-		envoyInstance *services.EnvoyInstance
+		envoyInstance *envoy.Instance
 		tu            *v1helpers.TestUpstream
 		envoyPort     uint32
 
@@ -478,7 +478,7 @@ func getTrivialProxy(ns string, bindPort uint32) *gloov1.Proxy {
 }
 
 // getNonSpecialIP returns a non-special IP that Kubernetes will allow in an endpoint.
-func getNonSpecialIP(instance *services.EnvoyInstance) string {
+func getNonSpecialIP(instance *envoy.Instance) string {
 	if instance.UseDocker {
 		return instance.LocalAddr()
 	}

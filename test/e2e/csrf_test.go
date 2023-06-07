@@ -1,31 +1,30 @@
 package e2e_test
 
 import (
-	"fmt"
-	"net/http"
-	"time"
+    "fmt"
+    "net/http"
+    "time"
 
-	"github.com/solo-io/gloo/test/testutils"
+    "github.com/solo-io/gloo/test/testutils"
 
-	"github.com/solo-io/gloo/test/gomega/matchers"
+    "github.com/solo-io/gloo/test/gomega/matchers"
 
-	"github.com/golang/protobuf/ptypes/wrappers"
-	"github.com/solo-io/gloo/test/e2e"
-	"github.com/solo-io/gloo/test/helpers"
+    "github.com/golang/protobuf/ptypes/wrappers"
+    "github.com/solo-io/gloo/test/e2e"
+    "github.com/solo-io/gloo/test/helpers"
 
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+    . "github.com/onsi/ginkgo/v2"
+    . "github.com/onsi/gomega"
 
-	"github.com/onsi/gomega/types"
-	gatewayv1 "github.com/solo-io/gloo/projects/gateway/pkg/api/v1"
-	gatewaydefaults "github.com/solo-io/gloo/projects/gateway/pkg/defaults"
-	gloo_config_core "github.com/solo-io/gloo/projects/gloo/pkg/api/external/envoy/config/core/v3"
-	csrf "github.com/solo-io/gloo/projects/gloo/pkg/api/external/envoy/extensions/filters/http/csrf/v3"
-	gloo_type_matcher "github.com/solo-io/gloo/projects/gloo/pkg/api/external/envoy/type/matcher/v3"
-	glootype "github.com/solo-io/gloo/projects/gloo/pkg/api/external/envoy/type/v3"
-	gloov1 "github.com/solo-io/gloo/projects/gloo/pkg/api/v1"
-	"github.com/solo-io/gloo/projects/gloo/pkg/defaults"
-	"github.com/solo-io/gloo/test/services"
+    "github.com/onsi/gomega/types"
+    gatewayv1 "github.com/solo-io/gloo/projects/gateway/pkg/api/v1"
+    gatewaydefaults "github.com/solo-io/gloo/projects/gateway/pkg/defaults"
+    gloo_config_core "github.com/solo-io/gloo/projects/gloo/pkg/api/external/envoy/config/core/v3"
+    csrf "github.com/solo-io/gloo/projects/gloo/pkg/api/external/envoy/extensions/filters/http/csrf/v3"
+    gloo_type_matcher "github.com/solo-io/gloo/projects/gloo/pkg/api/external/envoy/type/matcher/v3"
+    glootype "github.com/solo-io/gloo/projects/gloo/pkg/api/external/envoy/type/v3"
+    gloov1 "github.com/solo-io/gloo/projects/gloo/pkg/api/v1"
+    "github.com/solo-io/gloo/projects/gloo/pkg/defaults"
 )
 
 const (
@@ -290,7 +289,7 @@ func buildRequestFromOrigin(origin string) func() (*http.Response, error) {
 	}
 }
 
-func EventuallyAllowedOriginResponse(request func() (*http.Response, error), envoyInstance *services.EnvoyInstance, validateStatistics bool) {
+func EventuallyAllowedOriginResponse(request func() (*http.Response, error), envoyInstance *envoy.Instance, validateStatistics bool) {
 	EventuallyWithOffset(1, func(g Gomega) {
 		g.Expect(request()).Should(matchers.HaveOkResponse())
 
@@ -303,7 +302,7 @@ func EventuallyAllowedOriginResponse(request func() (*http.Response, error), env
 	}, time.Second*30).Should(Succeed())
 }
 
-func EventuallyInvalidOriginResponse(request func() (*http.Response, error), envoyInstance *services.EnvoyInstance, validateStatistics bool) {
+func EventuallyInvalidOriginResponse(request func() (*http.Response, error), envoyInstance *envoy.Instance, validateStatistics bool) {
 	EventuallyWithOffset(1, func(g Gomega) {
 		g.Expect(request()).Should(matchers.HaveHttpResponse(&matchers.HttpResponse{
 			StatusCode: http.StatusForbidden,

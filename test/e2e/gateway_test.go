@@ -310,7 +310,7 @@ var _ = Describe("Gateway", func() {
 			Context("traffic", func() {
 
 				var (
-					envoyInstance *services.EnvoyInstance
+					envoyInstance *envoy.Instance
 					testUpstream  *v1helpers.TestUpstream
 				)
 
@@ -556,7 +556,7 @@ var _ = Describe("Gateway", func() {
 
 			var (
 				defaultGateways []*gatewayv1.Gateway
-				envoyInstance   *services.EnvoyInstance
+				envoyInstance   *envoy.Instance
 				tu              *v1helpers.TestUpstream
 			)
 
@@ -769,7 +769,7 @@ var _ = Describe("Gateway", func() {
 		Context("hybrid gateway", func() {
 
 			var (
-				envoyInstance *services.EnvoyInstance
+				envoyInstance *envoy.Instance
 				testUpstream  *v1helpers.TestUpstream
 
 				virtualService *gatewayv1.VirtualService

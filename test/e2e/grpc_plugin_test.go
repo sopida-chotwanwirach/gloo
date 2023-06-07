@@ -41,7 +41,7 @@ var _ = Describe("GRPC to JSON Transcoding Plugin - Gloo API", func() {
 		ctx           context.Context
 		cancel        context.CancelFunc
 		testClients   services.TestClients
-		envoyInstance *services.EnvoyInstance
+		envoyInstance *envoy.Instance
 		tu            *v1helpers.TestUpstream
 	)
 

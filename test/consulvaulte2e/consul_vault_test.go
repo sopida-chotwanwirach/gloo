@@ -46,7 +46,7 @@ var _ = Describe("Consul + Vault Configuration Happy Path e2e", func() {
 		cancel         context.CancelFunc
 		consulInstance *services.ConsulInstance
 		vaultInstance  *services.VaultInstance
-		envoyInstance  *services.EnvoyInstance
+		envoyInstance  *envoy.Instance
 		svc1           *v1helpers.TestUpstream
 		err            error
 		settingsDir    string

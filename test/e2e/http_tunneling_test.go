@@ -48,7 +48,7 @@ var _ = Describe("tunneling", func() {
 		ctx            context.Context
 		cancel         context.CancelFunc
 		testClients    services.TestClients
-		envoyInstance  *services.EnvoyInstance
+		envoyInstance  *envoy.Instance
 		up             *gloov1.Upstream
 		tuPort         uint32
 		vs             *gatewayv1.VirtualService
