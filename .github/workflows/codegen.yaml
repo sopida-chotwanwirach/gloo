@@ -1,14 +1,5 @@
 name: CI
-
-on:
-  # We want to run this check on PRs to ensure that the codegen is up to date
-  pull_request: {}
-  # We utilize this job to seed the GitHub action go cache for the LTS branch
-  # We don't really need this job to run, just that the setup-go action runs
-  # However, since this job exists on all branches, it will be easier to maintain, since
-  # we will not need to update the definition when cutting a new LTS branch
-  push: {}
-
+on: pull_request
 jobs:
   codegen:
     name: codegen check
