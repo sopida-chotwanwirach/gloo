@@ -1465,6 +1465,16 @@ func (m *OidcAuthorizationCode) Equal(that interface{}) bool {
 		}
 	}
 
+	if h, ok := interface{}(m.GetCodeExchangeType()).(equality.Equalizer); ok {
+		if !h.Equal(target.GetCodeExchangeType()) {
+			return false
+		}
+	} else {
+		if !proto.Equal(m.GetCodeExchangeType(), target.GetCodeExchangeType()) {
+			return false
+		}
+	}
+
 	return true
 }
 
@@ -3833,6 +3843,157 @@ func (m *OidcAuthorizationCode_IdentityToken) Equal(that interface{}) bool {
 			}
 		}
 
+	}
+
+	return true
+}
+
+// Equal function
+func (m *OidcAuthorizationCode_CodeExchangeType) Equal(that interface{}) bool {
+	if that == nil {
+		return m == nil
+	}
+
+	target, ok := that.(*OidcAuthorizationCode_CodeExchangeType)
+	if !ok {
+		that2, ok := that.(OidcAuthorizationCode_CodeExchangeType)
+		if ok {
+			target = &that2
+		} else {
+			return false
+		}
+	}
+	if target == nil {
+		return m == nil
+	} else if m == nil {
+		return false
+	}
+
+	switch m.ExchangeConfig.(type) {
+
+	case *OidcAuthorizationCode_CodeExchangeType_ClientSecret_:
+		if _, ok := target.ExchangeConfig.(*OidcAuthorizationCode_CodeExchangeType_ClientSecret_); !ok {
+			return false
+		}
+
+		if h, ok := interface{}(m.GetClientSecret()).(equality.Equalizer); ok {
+			if !h.Equal(target.GetClientSecret()) {
+				return false
+			}
+		} else {
+			if !proto.Equal(m.GetClientSecret(), target.GetClientSecret()) {
+				return false
+			}
+		}
+
+	case *OidcAuthorizationCode_CodeExchangeType_PrivateKeyJwt_:
+		if _, ok := target.ExchangeConfig.(*OidcAuthorizationCode_CodeExchangeType_PrivateKeyJwt_); !ok {
+			return false
+		}
+
+		if h, ok := interface{}(m.GetPrivateKeyJwt()).(equality.Equalizer); ok {
+			if !h.Equal(target.GetPrivateKeyJwt()) {
+				return false
+			}
+		} else {
+			if !proto.Equal(m.GetPrivateKeyJwt(), target.GetPrivateKeyJwt()) {
+				return false
+			}
+		}
+
+	default:
+		// m is nil but target is not nil
+		if m.ExchangeConfig != target.ExchangeConfig {
+			return false
+		}
+	}
+
+	return true
+}
+
+// Equal function
+func (m *OidcAuthorizationCode_CodeExchangeType_ClientSecret) Equal(that interface{}) bool {
+	if that == nil {
+		return m == nil
+	}
+
+	target, ok := that.(*OidcAuthorizationCode_CodeExchangeType_ClientSecret)
+	if !ok {
+		that2, ok := that.(OidcAuthorizationCode_CodeExchangeType_ClientSecret)
+		if ok {
+			target = &that2
+		} else {
+			return false
+		}
+	}
+	if target == nil {
+		return m == nil
+	} else if m == nil {
+		return false
+	}
+
+	if h, ok := interface{}(m.GetClientSecretRef()).(equality.Equalizer); ok {
+		if !h.Equal(target.GetClientSecretRef()) {
+			return false
+		}
+	} else {
+		if !proto.Equal(m.GetClientSecretRef(), target.GetClientSecretRef()) {
+			return false
+		}
+	}
+
+	if h, ok := interface{}(m.GetDisableClientSecret()).(equality.Equalizer); ok {
+		if !h.Equal(target.GetDisableClientSecret()) {
+			return false
+		}
+	} else {
+		if !proto.Equal(m.GetDisableClientSecret(), target.GetDisableClientSecret()) {
+			return false
+		}
+	}
+
+	return true
+}
+
+// Equal function
+func (m *OidcAuthorizationCode_CodeExchangeType_PrivateKeyJwt) Equal(that interface{}) bool {
+	if that == nil {
+		return m == nil
+	}
+
+	target, ok := that.(*OidcAuthorizationCode_CodeExchangeType_PrivateKeyJwt)
+	if !ok {
+		that2, ok := that.(OidcAuthorizationCode_CodeExchangeType_PrivateKeyJwt)
+		if ok {
+			target = &that2
+		} else {
+			return false
+		}
+	}
+	if target == nil {
+		return m == nil
+	} else if m == nil {
+		return false
+	}
+
+	if h, ok := interface{}(m.GetSigningKeyRef()).(equality.Equalizer); ok {
+		if !h.Equal(target.GetSigningKeyRef()) {
+			return false
+		}
+	} else {
+		if !proto.Equal(m.GetSigningKeyRef(), target.GetSigningKeyRef()) {
+			return false
+		}
+	}
+
+	if h, ok := interface{}(m.GetValidFor()).(equality.Equalizer); ok {
+		if !h.Equal(target.GetValidFor()) {
+			return false
+		}
+	} else {
+		if !proto.Equal(m.GetValidFor(), target.GetValidFor()) {
+			return false
+		}
 	}
 
 	return true

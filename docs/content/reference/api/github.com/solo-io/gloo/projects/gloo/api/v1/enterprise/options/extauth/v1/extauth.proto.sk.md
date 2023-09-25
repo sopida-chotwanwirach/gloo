@@ -49,6 +49,9 @@ weight: 5
 - [OidcAuthorizationCode](#oidcauthorizationcode)
 - [AccessToken](#accesstoken)
 - [IdentityToken](#identitytoken)
+- [CodeExchangeType](#codeexchangetype)
+- [ClientSecret](#clientsecret)
+- [PrivateKeyJwt](#privatekeyjwt)
 - [PlainOAuth2](#plainoauth2)
 - [JwtValidation](#jwtvalidation)
 - [RemoteJwks](#remotejwks)
@@ -930,13 +933,14 @@ Map a single claim from an OAuth2 or OIDC token to a header in the request to th
 "disableClientSecret": .google.protobuf.BoolValue
 "accessToken": .enterprise.gloo.solo.io.OidcAuthorizationCode.AccessToken
 "identityToken": .enterprise.gloo.solo.io.OidcAuthorizationCode.IdentityToken
+"codeExchangeType": .enterprise.gloo.solo.io.OidcAuthorizationCode.CodeExchangeType
 
 ```
 
 | Field | Type | Description |
 | ----- | ---- | ----------- | 
 | `clientId` | `string` | your client id as registered with the issuer. |
-| `clientSecretRef` | [.core.solo.io.ResourceRef](../../../../../../../../../../solo-kit/api/v1/ref.proto.sk/#resourceref) | your client secret as registered with the issuer. This is required unless `disable_client_secret` is true. |
+| `clientSecretRef` | [.core.solo.io.ResourceRef](../../../../../../../../../../solo-kit/api/v1/ref.proto.sk/#resourceref) | your client secret as registered with the issuer. This is required unless `disable_client_secret` is true This field has been deprecated and can be set in the client_secret option of code_exchange_type. |
 | `issuerUrl` | `string` | The url of the issuer. We will look for OIDC information in issuerUrl+ ".well-known/openid-configuration". |
 | `authEndpointQueryParams` | `map<string, string>` | extra query parameters to apply to the Ext-Auth service's authorization request to the identity provider. this can be useful for flows such as PKCE (https://www.oauth.com/oauth2-servers/pkce/authorization-request/) to set the `code_challenge` and `code_challenge_method`. |
 | `tokenEndpointQueryParams` | `map<string, string>` | extra query parameters to apply to the Ext-Auth service's token request to the identity provider. this can be useful for flows such as PKCE (https://www.oauth.com/oauth2-servers/pkce/authorization-request/) to set the `code_verifier`. |
@@ -955,9 +959,10 @@ Map a single claim from an OAuth2 or OIDC token to a header in the request to th
 | `autoMapFromMetadata` | [.enterprise.gloo.solo.io.AutoMapFromMetadata](../extauth.proto.sk/#automapfrommetadata) | If specified, authEndpointQueryParams and tokenEndpointQueryParams will be populated using dynamic metadata values. By default parameters will be extracted from the solo_authconfig_oidc namespace this behavior can be overridden by explicitly specifying a namespace. |
 | `endSessionProperties` | [.enterprise.gloo.solo.io.EndSessionProperties](../extauth.proto.sk/#endsessionproperties) | If specified, these are properties defined for the end session endpoint specifications. Noted [here](https://openid.net/specs/openid-connect-rpinitiated-1_0.html) in the OIDC documentation. |
 | `dynamicMetadataFromClaims` | `map<string, string>` | Map of metadata key to claim. Ie: dynamic_metadata_from_claims: issuer: iss email: email When specified, the matching claims from the ID token will be emitted as dynamic metadata. Note that metadata keys must be unique, and the claim names must be alphanumeric and use `-` or `_` as separators. The metadata will live in a namespace specified by the canonical name of the ext auth filter (in our case `envoy.filters.http.ext_authz`), and the structure of the claim value will be preserved in the metadata struct. |
-| `disableClientSecret` | [.google.protobuf.BoolValue](https://developers.google.com/protocol-buffers/docs/reference/csharp/class/google/protobuf/well-known-types/bool-value) | If true, do not check for or use the client secret. Generally the client secret is required and AuthConfigs will be rejected if it isn't set. However certain implementations of the PKCE flow do not use a client secret (including Okta) so this setting allows configuring Oidc without a client secret. |
+| `disableClientSecret` | [.google.protobuf.BoolValue](https://developers.google.com/protocol-buffers/docs/reference/csharp/class/google/protobuf/well-known-types/bool-value) | If true, do not check for or use the client secret. Generally the client secret is required and AuthConfigs will be rejected if it isn't set. However certain implementations of the PKCE flow do not use a client secret (including Okta) so this setting allows configuring Oidc without a client secret. This field has been deprecated and can be set in the client_secret option of code_exchange_type. |
 | `accessToken` | [.enterprise.gloo.solo.io.OidcAuthorizationCode.AccessToken](../extauth.proto.sk/#accesstoken) | Optional: Configuration specific to the OAuth2 access token received and processed by the ext-auth-service. |
 | `identityToken` | [.enterprise.gloo.solo.io.OidcAuthorizationCode.IdentityToken](../extauth.proto.sk/#identitytoken) | Optional: Configuration specific to the OIDC identity token received and processed by the ext-auth-service. |
+| `codeExchangeType` | [.enterprise.gloo.solo.io.OidcAuthorizationCode.CodeExchangeType](../extauth.proto.sk/#codeexchangetype) |  |
 
 
 
@@ -994,6 +999,66 @@ Optional: Map a single claim from an OIDC identity token to a header in the requ
 | Field | Type | Description |
 | ----- | ---- | ----------- | 
 | `claimsToHeaders` | [[]enterprise.gloo.solo.io.ClaimToHeader](../extauth.proto.sk/#claimtoheader) | A list of claims to be mapped from the JWT token received by ext-auth-service to an upstream destination. |
+
+
+
+
+---
+### CodeExchangeType
+
+ 
+Configuration specific to the code exchange type used to exchange the access code for the access and id tokens.
+
+```yaml
+"clientSecret": .enterprise.gloo.solo.io.OidcAuthorizationCode.CodeExchangeType.ClientSecret
+"privateKeyJwt": .enterprise.gloo.solo.io.OidcAuthorizationCode.CodeExchangeType.PrivateKeyJwt
+
+```
+
+| Field | Type | Description |
+| ----- | ---- | ----------- | 
+| `clientSecret` | [.enterprise.gloo.solo.io.OidcAuthorizationCode.CodeExchangeType.ClientSecret](../extauth.proto.sk/#clientsecret) | Use the client secret method to exchange the access code for the tokens. Only one of `clientSecret` or `privateKeyJwt` can be set. |
+| `privateKeyJwt` | [.enterprise.gloo.solo.io.OidcAuthorizationCode.CodeExchangeType.PrivateKeyJwt](../extauth.proto.sk/#privatekeyjwt) | Use the private ket JWT method to exchange the access code for the tokens. Only one of `privateKeyJwt` or `clientSecret` can be set. |
+
+
+
+
+---
+### ClientSecret
+
+ 
+Client Secret Exchange requires a client secret (unless it is disabled)
+
+```yaml
+"clientSecretRef": .core.solo.io.ResourceRef
+"disableClientSecret": .google.protobuf.BoolValue
+
+```
+
+| Field | Type | Description |
+| ----- | ---- | ----------- | 
+| `clientSecretRef` | [.core.solo.io.ResourceRef](../../../../../../../../../../solo-kit/api/v1/ref.proto.sk/#resourceref) | your client secret as registered with the issuer. This is required unless `disable_client_secret` is true. |
+| `disableClientSecret` | [.google.protobuf.BoolValue](https://developers.google.com/protocol-buffers/docs/reference/csharp/class/google/protobuf/well-known-types/bool-value) | If true, do not check for or use the client secret. Generally the client secret is required and AuthConfigs will be rejected if it isn't set. However certain implementations of the PKCE flow do not use a client secret (including Okta) so this setting allows configuring Oidc without a client secret. |
+
+
+
+
+---
+### PrivateKeyJwt
+
+ 
+Client Secret Exchange requires a signing key for the JWT and an duration for the JWT to be valid.
+
+```yaml
+"signingKeyRef": .core.solo.io.ResourceRef
+"validFor": .google.protobuf.Duration
+
+```
+
+| Field | Type | Description |
+| ----- | ---- | ----------- | 
+| `signingKeyRef` | [.core.solo.io.ResourceRef](../../../../../../../../../../solo-kit/api/v1/ref.proto.sk/#resourceref) | Signing key for the JWT used to exchange the access code for the tokens. |
+| `validFor` | [.google.protobuf.Duration](https://developers.google.com/protocol-buffers/docs/reference/csharp/class/google/protobuf/well-known-types/duration) | Amount of time for which the JWT is valid. No maximmum is enforced, but different IDPs may impose limits on how far in the future the expiration time is allowed to be. If omitted, default is 60s. |
 
 
 
