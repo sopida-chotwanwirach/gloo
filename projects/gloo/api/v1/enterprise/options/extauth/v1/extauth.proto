@@ -1550,12 +1550,18 @@ message ExtAuthConfig {
             // your client secret as registered with the issuer. This field may be nil/empty. Any validation of the client secret happens when translating the public interface
             string client_secret = 1 [(extproto.sensitive) = true];
         }
-
-        // Configure the specifics of how the client secret is exchanged for an access token. Currently only supporting client secret.
-        oneof exchange_config {
-            // Use the client secret to exchange for an access token.
-            ClientSecretExchangeConfig client_secret_exchange_config = 21;
+        message PkJwtExchangeConfig{
+            string signing_key = 1 [(extproto.sensitive) = true];
+            google.protobuf.Duration valid_for = 2;
         }
+
+        oneof exchange_config {
+            // Fetches the JWKS from a remote location.
+            ClientSecretExchangeConfig client_secret_exchange_config = 21;
+            // Loads the JWKS from a local data source.
+            PkJwtExchangeConfig pk_jwt_exchange_config = 22;
+        }
+
 
     }
 
