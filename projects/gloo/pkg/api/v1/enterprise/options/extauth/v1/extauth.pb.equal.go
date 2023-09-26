@@ -4856,6 +4856,21 @@ func (m *ExtAuthConfig_OidcAuthorizationCodeConfig) Equal(that interface{}) bool
 			}
 		}
 
+	case *ExtAuthConfig_OidcAuthorizationCodeConfig_PkJwtExchangeConfig_:
+		if _, ok := target.ExchangeConfig.(*ExtAuthConfig_OidcAuthorizationCodeConfig_PkJwtExchangeConfig_); !ok {
+			return false
+		}
+
+		if h, ok := interface{}(m.GetPkJwtExchangeConfig()).(equality.Equalizer); ok {
+			if !h.Equal(target.GetPkJwtExchangeConfig()) {
+				return false
+			}
+		} else {
+			if !proto.Equal(m.GetPkJwtExchangeConfig(), target.GetPkJwtExchangeConfig()) {
+				return false
+			}
+		}
+
 	default:
 		// m is nil but target is not nil
 		if m.ExchangeConfig != target.ExchangeConfig {
@@ -5849,6 +5864,44 @@ func (m *ExtAuthConfig_OidcAuthorizationCodeConfig_ClientSecretExchangeConfig) E
 
 	if strings.Compare(m.GetClientSecret(), target.GetClientSecret()) != 0 {
 		return false
+	}
+
+	return true
+}
+
+// Equal function
+func (m *ExtAuthConfig_OidcAuthorizationCodeConfig_PkJwtExchangeConfig) Equal(that interface{}) bool {
+	if that == nil {
+		return m == nil
+	}
+
+	target, ok := that.(*ExtAuthConfig_OidcAuthorizationCodeConfig_PkJwtExchangeConfig)
+	if !ok {
+		that2, ok := that.(ExtAuthConfig_OidcAuthorizationCodeConfig_PkJwtExchangeConfig)
+		if ok {
+			target = &that2
+		} else {
+			return false
+		}
+	}
+	if target == nil {
+		return m == nil
+	} else if m == nil {
+		return false
+	}
+
+	if strings.Compare(m.GetSigningKey(), target.GetSigningKey()) != 0 {
+		return false
+	}
+
+	if h, ok := interface{}(m.GetValidFor()).(equality.Equalizer); ok {
+		if !h.Equal(target.GetValidFor()) {
+			return false
+		}
+	} else {
+		if !proto.Equal(m.GetValidFor(), target.GetValidFor()) {
+			return false
+		}
 	}
 
 	return true
