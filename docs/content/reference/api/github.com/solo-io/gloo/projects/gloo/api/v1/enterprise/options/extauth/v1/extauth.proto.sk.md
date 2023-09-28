@@ -87,7 +87,6 @@ weight: 5
 - [UserSessionConfig](#usersessionconfig)
 - [CipherConfig](#cipherconfig)
 - [OidcAuthorizationCodeConfig](#oidcauthorizationcodeconfig)
-- [ClientSecretExchangeConfig](#clientsecretexchangeconfig)
 - [PkJwtExchangeConfig](#pkjwtexchangeconfig)
 - [AccessTokenValidationConfig](#accesstokenvalidationconfig)
 - [JwtValidation](#jwtvalidation)
@@ -1947,7 +1946,6 @@ Deprecated, prefer OAuth2Config
 "autoMapFromMetadata": .enterprise.gloo.solo.io.AutoMapFromMetadata
 "endSessionProperties": .enterprise.gloo.solo.io.EndSessionProperties
 "userSession": .enterprise.gloo.solo.io.ExtAuthConfig.UserSessionConfig
-"clientSecretExchangeConfig": .enterprise.gloo.solo.io.ExtAuthConfig.OidcAuthorizationCodeConfig.ClientSecretExchangeConfig
 "pkJwtExchangeConfig": .enterprise.gloo.solo.io.ExtAuthConfig.OidcAuthorizationCodeConfig.PkJwtExchangeConfig
 
 ```
@@ -1974,25 +1972,7 @@ Deprecated, prefer OAuth2Config
 | `autoMapFromMetadata` | [.enterprise.gloo.solo.io.AutoMapFromMetadata](../extauth.proto.sk/#automapfrommetadata) | If specified, authEndpointQueryParams and tokenEndpointQueryParams will be populated using dynamic metadata values. By default parameters will be extracted from the solo_authconfig_oidc namespace this behavior can be overridden by explicitly specifying a namespace. |
 | `endSessionProperties` | [.enterprise.gloo.solo.io.EndSessionProperties](../extauth.proto.sk/#endsessionproperties) | If specified, these are properties defined for the end session endpoint specifications. Noted [here](https://openid.net/specs/openid-connect-rpinitiated-1_0.html) in the OIDC documentation. |
 | `userSession` | [.enterprise.gloo.solo.io.ExtAuthConfig.UserSessionConfig](../extauth.proto.sk/#usersessionconfig) | Configuration related to the user session. |
-| `clientSecretExchangeConfig` | [.enterprise.gloo.solo.io.ExtAuthConfig.OidcAuthorizationCodeConfig.ClientSecretExchangeConfig](../extauth.proto.sk/#clientsecretexchangeconfig) | Fetches the JWKS from a remote location. Only one of `clientSecretExchangeConfig` or `pkJwtExchangeConfig` can be set. |
-| `pkJwtExchangeConfig` | [.enterprise.gloo.solo.io.ExtAuthConfig.OidcAuthorizationCodeConfig.PkJwtExchangeConfig](../extauth.proto.sk/#pkjwtexchangeconfig) | Loads the JWKS from a local data source. Only one of `pkJwtExchangeConfig` or `clientSecretExchangeConfig` can be set. |
-
-
-
-
----
-### ClientSecretExchangeConfig
-
-
-
-```yaml
-"clientSecret": string
-
-```
-
-| Field | Type | Description |
-| ----- | ---- | ----------- | 
-| `clientSecret` | `string` | your client secret as registered with the issuer. This field may be nil/empty. Any validation of the client secret happens when translating the public interface. |
+| `pkJwtExchangeConfig` | [.enterprise.gloo.solo.io.ExtAuthConfig.OidcAuthorizationCodeConfig.PkJwtExchangeConfig](../extauth.proto.sk/#pkjwtexchangeconfig) |  |
 
 
 

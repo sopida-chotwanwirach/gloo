@@ -4839,41 +4839,12 @@ func (m *ExtAuthConfig_OidcAuthorizationCodeConfig) Equal(that interface{}) bool
 		}
 	}
 
-	switch m.ExchangeConfig.(type) {
-
-	case *ExtAuthConfig_OidcAuthorizationCodeConfig_ClientSecretExchangeConfig_:
-		if _, ok := target.ExchangeConfig.(*ExtAuthConfig_OidcAuthorizationCodeConfig_ClientSecretExchangeConfig_); !ok {
+	if h, ok := interface{}(m.GetPkJwtExchangeConfig()).(equality.Equalizer); ok {
+		if !h.Equal(target.GetPkJwtExchangeConfig()) {
 			return false
 		}
-
-		if h, ok := interface{}(m.GetClientSecretExchangeConfig()).(equality.Equalizer); ok {
-			if !h.Equal(target.GetClientSecretExchangeConfig()) {
-				return false
-			}
-		} else {
-			if !proto.Equal(m.GetClientSecretExchangeConfig(), target.GetClientSecretExchangeConfig()) {
-				return false
-			}
-		}
-
-	case *ExtAuthConfig_OidcAuthorizationCodeConfig_PkJwtExchangeConfig_:
-		if _, ok := target.ExchangeConfig.(*ExtAuthConfig_OidcAuthorizationCodeConfig_PkJwtExchangeConfig_); !ok {
-			return false
-		}
-
-		if h, ok := interface{}(m.GetPkJwtExchangeConfig()).(equality.Equalizer); ok {
-			if !h.Equal(target.GetPkJwtExchangeConfig()) {
-				return false
-			}
-		} else {
-			if !proto.Equal(m.GetPkJwtExchangeConfig(), target.GetPkJwtExchangeConfig()) {
-				return false
-			}
-		}
-
-	default:
-		// m is nil but target is not nil
-		if m.ExchangeConfig != target.ExchangeConfig {
+	} else {
+		if !proto.Equal(m.GetPkJwtExchangeConfig(), target.GetPkJwtExchangeConfig()) {
 			return false
 		}
 	}
@@ -5835,34 +5806,6 @@ func (m *ExtAuthConfig_UserSessionConfig_CipherConfig) Equal(that interface{}) b
 	}
 
 	if strings.Compare(m.GetKey(), target.GetKey()) != 0 {
-		return false
-	}
-
-	return true
-}
-
-// Equal function
-func (m *ExtAuthConfig_OidcAuthorizationCodeConfig_ClientSecretExchangeConfig) Equal(that interface{}) bool {
-	if that == nil {
-		return m == nil
-	}
-
-	target, ok := that.(*ExtAuthConfig_OidcAuthorizationCodeConfig_ClientSecretExchangeConfig)
-	if !ok {
-		that2, ok := that.(ExtAuthConfig_OidcAuthorizationCodeConfig_ClientSecretExchangeConfig)
-		if ok {
-			target = &that2
-		} else {
-			return false
-		}
-	}
-	if target == nil {
-		return m == nil
-	} else if m == nil {
-		return false
-	}
-
-	if strings.Compare(m.GetClientSecret(), target.GetClientSecret()) != 0 {
 		return false
 	}
 

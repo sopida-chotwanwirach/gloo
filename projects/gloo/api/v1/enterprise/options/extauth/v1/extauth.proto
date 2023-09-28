@@ -1443,7 +1443,7 @@ message ExtAuthConfig {
 
         // your client secret as registered with the issuer. Fully deprecated and will be ignored.
         // Please use the client_secret_exchange_config option of the exchange_config field to configure the client secret.
-        string client_secret = 2 [(extproto.sensitive) = true, deprecated = true];
+        string client_secret = 2 [(extproto.sensitive) = true];
 
         // The url of the issuer. We will look for OIDC information in issuerUrl+
         // ".well-known/openid-configuration"
@@ -1546,23 +1546,12 @@ message ExtAuthConfig {
         // Configuration related to the user session.
         UserSessionConfig user_session = 20;
 
-        message ClientSecretExchangeConfig {
-            // your client secret as registered with the issuer. This field may be nil/empty. Any validation of the client secret happens when translating the public interface
-            string client_secret = 1 [(extproto.sensitive) = true];
-        }
         message PkJwtExchangeConfig{
             string signing_key = 1 [(extproto.sensitive) = true];
             google.protobuf.Duration valid_for = 2;
         }
 
-        oneof exchange_config {
-            // Fetches the JWKS from a remote location.
-            ClientSecretExchangeConfig client_secret_exchange_config = 21;
-            // Loads the JWKS from a local data source.
-            PkJwtExchangeConfig pk_jwt_exchange_config = 22;
-        }
-
-
+        PkJwtExchangeConfig pk_jwt_exchange_config = 22;
     }
 
     message AccessTokenValidationConfig {
