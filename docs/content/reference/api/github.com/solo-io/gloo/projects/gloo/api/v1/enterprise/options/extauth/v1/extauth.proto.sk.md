@@ -49,7 +49,7 @@ weight: 5
 - [OidcAuthorizationCode](#oidcauthorizationcode)
 - [AccessToken](#accesstoken)
 - [IdentityToken](#identitytoken)
-- [CodeExchangeType](#codeexchangetype)
+- [ClientAuthentication](#clientauthentication)
 - [ClientSecret](#clientsecret)
 - [PrivateKeyJwt](#privatekeyjwt)
 - [PlainOAuth2](#plainoauth2)
@@ -933,7 +933,7 @@ Map a single claim from an OAuth2 or OIDC token to a header in the request to th
 "disableClientSecret": .google.protobuf.BoolValue
 "accessToken": .enterprise.gloo.solo.io.OidcAuthorizationCode.AccessToken
 "identityToken": .enterprise.gloo.solo.io.OidcAuthorizationCode.IdentityToken
-"codeExchangeType": .enterprise.gloo.solo.io.OidcAuthorizationCode.CodeExchangeType
+"clientAuthentication": .enterprise.gloo.solo.io.OidcAuthorizationCode.ClientAuthentication
 
 ```
 
@@ -962,7 +962,7 @@ Map a single claim from an OAuth2 or OIDC token to a header in the request to th
 | `disableClientSecret` | [.google.protobuf.BoolValue](https://developers.google.com/protocol-buffers/docs/reference/csharp/class/google/protobuf/well-known-types/bool-value) | If true, do not check for or use the client secret. Generally the client secret is required and AuthConfigs will be rejected if it isn't set. However certain implementations of the PKCE flow do not use a client secret (including Okta) so this setting allows configuring Oidc without a client secret. This field has been deprecated and can be set in the client_secret option of code_exchange_type. |
 | `accessToken` | [.enterprise.gloo.solo.io.OidcAuthorizationCode.AccessToken](../extauth.proto.sk/#accesstoken) | Optional: Configuration specific to the OAuth2 access token received and processed by the ext-auth-service. |
 | `identityToken` | [.enterprise.gloo.solo.io.OidcAuthorizationCode.IdentityToken](../extauth.proto.sk/#identitytoken) | Optional: Configuration specific to the OIDC identity token received and processed by the ext-auth-service. |
-| `codeExchangeType` | [.enterprise.gloo.solo.io.OidcAuthorizationCode.CodeExchangeType](../extauth.proto.sk/#codeexchangetype) |  |
+| `clientAuthentication` | [.enterprise.gloo.solo.io.OidcAuthorizationCode.ClientAuthentication](../extauth.proto.sk/#clientauthentication) |  |
 
 
 
@@ -1004,21 +1004,21 @@ Optional: Map a single claim from an OIDC identity token to a header in the requ
 
 
 ---
-### CodeExchangeType
+### ClientAuthentication
 
  
 Configuration specific to the code exchange type used to exchange the access code for the access and id tokens.
 
 ```yaml
-"clientSecret": .enterprise.gloo.solo.io.OidcAuthorizationCode.CodeExchangeType.ClientSecret
-"privateKeyJwt": .enterprise.gloo.solo.io.OidcAuthorizationCode.CodeExchangeType.PrivateKeyJwt
+"clientSecret": .enterprise.gloo.solo.io.OidcAuthorizationCode.ClientAuthentication.ClientSecret
+"privateKeyJwt": .enterprise.gloo.solo.io.OidcAuthorizationCode.ClientAuthentication.PrivateKeyJwt
 
 ```
 
 | Field | Type | Description |
 | ----- | ---- | ----------- | 
-| `clientSecret` | [.enterprise.gloo.solo.io.OidcAuthorizationCode.CodeExchangeType.ClientSecret](../extauth.proto.sk/#clientsecret) | Use the client secret method to exchange the access code for the tokens. Only one of `clientSecret` or `privateKeyJwt` can be set. |
-| `privateKeyJwt` | [.enterprise.gloo.solo.io.OidcAuthorizationCode.CodeExchangeType.PrivateKeyJwt](../extauth.proto.sk/#privatekeyjwt) | Use the private ket JWT method to exchange the access code for the tokens. Only one of `privateKeyJwt` or `clientSecret` can be set. |
+| `clientSecret` | [.enterprise.gloo.solo.io.OidcAuthorizationCode.ClientAuthentication.ClientSecret](../extauth.proto.sk/#clientsecret) | Use the client secret method to exchange the access code for the tokens. Only one of `clientSecret` or `privateKeyJwt` can be set. |
+| `privateKeyJwt` | [.enterprise.gloo.solo.io.OidcAuthorizationCode.ClientAuthentication.PrivateKeyJwt](../extauth.proto.sk/#privatekeyjwt) | Use the private ket JWT method to exchange the access code for the tokens. Only one of `privateKeyJwt` or `clientSecret` can be set. |
 
 
 

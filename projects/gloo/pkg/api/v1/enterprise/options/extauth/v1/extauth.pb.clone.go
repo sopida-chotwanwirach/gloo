@@ -868,10 +868,10 @@ func (m *OidcAuthorizationCode) Clone() proto.Message {
 		target.IdentityToken = proto.Clone(m.GetIdentityToken()).(*OidcAuthorizationCode_IdentityToken)
 	}
 
-	if h, ok := interface{}(m.GetCodeExchangeType()).(clone.Cloner); ok {
-		target.CodeExchangeType = h.Clone().(*OidcAuthorizationCode_CodeExchangeType)
+	if h, ok := interface{}(m.GetClientAuthentication()).(clone.Cloner); ok {
+		target.ClientAuthentication = h.Clone().(*OidcAuthorizationCode_ClientAuthentication)
 	} else {
-		target.CodeExchangeType = proto.Clone(m.GetCodeExchangeType()).(*OidcAuthorizationCode_CodeExchangeType)
+		target.ClientAuthentication = proto.Clone(m.GetClientAuthentication()).(*OidcAuthorizationCode_ClientAuthentication)
 	}
 
 	return target
@@ -2295,36 +2295,36 @@ func (m *OidcAuthorizationCode_IdentityToken) Clone() proto.Message {
 }
 
 // Clone function
-func (m *OidcAuthorizationCode_CodeExchangeType) Clone() proto.Message {
-	var target *OidcAuthorizationCode_CodeExchangeType
+func (m *OidcAuthorizationCode_ClientAuthentication) Clone() proto.Message {
+	var target *OidcAuthorizationCode_ClientAuthentication
 	if m == nil {
 		return target
 	}
-	target = &OidcAuthorizationCode_CodeExchangeType{}
+	target = &OidcAuthorizationCode_ClientAuthentication{}
 
 	switch m.ExchangeConfig.(type) {
 
-	case *OidcAuthorizationCode_CodeExchangeType_ClientSecret_:
+	case *OidcAuthorizationCode_ClientAuthentication_ClientSecret_:
 
 		if h, ok := interface{}(m.GetClientSecret()).(clone.Cloner); ok {
-			target.ExchangeConfig = &OidcAuthorizationCode_CodeExchangeType_ClientSecret_{
-				ClientSecret: h.Clone().(*OidcAuthorizationCode_CodeExchangeType_ClientSecret),
+			target.ExchangeConfig = &OidcAuthorizationCode_ClientAuthentication_ClientSecret_{
+				ClientSecret: h.Clone().(*OidcAuthorizationCode_ClientAuthentication_ClientSecret),
 			}
 		} else {
-			target.ExchangeConfig = &OidcAuthorizationCode_CodeExchangeType_ClientSecret_{
-				ClientSecret: proto.Clone(m.GetClientSecret()).(*OidcAuthorizationCode_CodeExchangeType_ClientSecret),
+			target.ExchangeConfig = &OidcAuthorizationCode_ClientAuthentication_ClientSecret_{
+				ClientSecret: proto.Clone(m.GetClientSecret()).(*OidcAuthorizationCode_ClientAuthentication_ClientSecret),
 			}
 		}
 
-	case *OidcAuthorizationCode_CodeExchangeType_PrivateKeyJwt_:
+	case *OidcAuthorizationCode_ClientAuthentication_PrivateKeyJwt_:
 
 		if h, ok := interface{}(m.GetPrivateKeyJwt()).(clone.Cloner); ok {
-			target.ExchangeConfig = &OidcAuthorizationCode_CodeExchangeType_PrivateKeyJwt_{
-				PrivateKeyJwt: h.Clone().(*OidcAuthorizationCode_CodeExchangeType_PrivateKeyJwt),
+			target.ExchangeConfig = &OidcAuthorizationCode_ClientAuthentication_PrivateKeyJwt_{
+				PrivateKeyJwt: h.Clone().(*OidcAuthorizationCode_ClientAuthentication_PrivateKeyJwt),
 			}
 		} else {
-			target.ExchangeConfig = &OidcAuthorizationCode_CodeExchangeType_PrivateKeyJwt_{
-				PrivateKeyJwt: proto.Clone(m.GetPrivateKeyJwt()).(*OidcAuthorizationCode_CodeExchangeType_PrivateKeyJwt),
+			target.ExchangeConfig = &OidcAuthorizationCode_ClientAuthentication_PrivateKeyJwt_{
+				PrivateKeyJwt: proto.Clone(m.GetPrivateKeyJwt()).(*OidcAuthorizationCode_ClientAuthentication_PrivateKeyJwt),
 			}
 		}
 
@@ -2334,12 +2334,12 @@ func (m *OidcAuthorizationCode_CodeExchangeType) Clone() proto.Message {
 }
 
 // Clone function
-func (m *OidcAuthorizationCode_CodeExchangeType_ClientSecret) Clone() proto.Message {
-	var target *OidcAuthorizationCode_CodeExchangeType_ClientSecret
+func (m *OidcAuthorizationCode_ClientAuthentication_ClientSecret) Clone() proto.Message {
+	var target *OidcAuthorizationCode_ClientAuthentication_ClientSecret
 	if m == nil {
 		return target
 	}
-	target = &OidcAuthorizationCode_CodeExchangeType_ClientSecret{}
+	target = &OidcAuthorizationCode_ClientAuthentication_ClientSecret{}
 
 	if h, ok := interface{}(m.GetClientSecretRef()).(clone.Cloner); ok {
 		target.ClientSecretRef = h.Clone().(*github_com_solo_io_solo_kit_pkg_api_v1_resources_core.ResourceRef)
@@ -2357,12 +2357,12 @@ func (m *OidcAuthorizationCode_CodeExchangeType_ClientSecret) Clone() proto.Mess
 }
 
 // Clone function
-func (m *OidcAuthorizationCode_CodeExchangeType_PrivateKeyJwt) Clone() proto.Message {
-	var target *OidcAuthorizationCode_CodeExchangeType_PrivateKeyJwt
+func (m *OidcAuthorizationCode_ClientAuthentication_PrivateKeyJwt) Clone() proto.Message {
+	var target *OidcAuthorizationCode_ClientAuthentication_PrivateKeyJwt
 	if m == nil {
 		return target
 	}
-	target = &OidcAuthorizationCode_CodeExchangeType_PrivateKeyJwt{}
+	target = &OidcAuthorizationCode_ClientAuthentication_PrivateKeyJwt{}
 
 	if h, ok := interface{}(m.GetSigningKeyRef()).(clone.Cloner); ok {
 		target.SigningKeyRef = h.Clone().(*github_com_solo_io_solo_kit_pkg_api_v1_resources_core.ResourceRef)

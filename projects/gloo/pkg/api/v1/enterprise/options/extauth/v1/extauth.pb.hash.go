@@ -1628,18 +1628,18 @@ func (m *OidcAuthorizationCode) Hash(hasher hash.Hash64) (uint64, error) {
 		}
 	}
 
-	if h, ok := interface{}(m.GetCodeExchangeType()).(safe_hasher.SafeHasher); ok {
-		if _, err = hasher.Write([]byte("CodeExchangeType")); err != nil {
+	if h, ok := interface{}(m.GetClientAuthentication()).(safe_hasher.SafeHasher); ok {
+		if _, err = hasher.Write([]byte("ClientAuthentication")); err != nil {
 			return 0, err
 		}
 		if _, err = h.Hash(hasher); err != nil {
 			return 0, err
 		}
 	} else {
-		if fieldValue, err := hashstructure.Hash(m.GetCodeExchangeType(), nil); err != nil {
+		if fieldValue, err := hashstructure.Hash(m.GetClientAuthentication(), nil); err != nil {
 			return 0, err
 		} else {
-			if _, err = hasher.Write([]byte("CodeExchangeType")); err != nil {
+			if _, err = hasher.Write([]byte("ClientAuthentication")); err != nil {
 				return 0, err
 			}
 			if err := binary.Write(hasher, binary.LittleEndian, fieldValue); err != nil {
@@ -4303,7 +4303,7 @@ func (m *OidcAuthorizationCode_IdentityToken) Hash(hasher hash.Hash64) (uint64, 
 }
 
 // Hash function
-func (m *OidcAuthorizationCode_CodeExchangeType) Hash(hasher hash.Hash64) (uint64, error) {
+func (m *OidcAuthorizationCode_ClientAuthentication) Hash(hasher hash.Hash64) (uint64, error) {
 	if m == nil {
 		return 0, nil
 	}
@@ -4311,13 +4311,13 @@ func (m *OidcAuthorizationCode_CodeExchangeType) Hash(hasher hash.Hash64) (uint6
 		hasher = fnv.New64()
 	}
 	var err error
-	if _, err = hasher.Write([]byte("enterprise.gloo.solo.io.github.com/solo-io/gloo/projects/gloo/pkg/api/v1/enterprise/options/extauth/v1.OidcAuthorizationCode_CodeExchangeType")); err != nil {
+	if _, err = hasher.Write([]byte("enterprise.gloo.solo.io.github.com/solo-io/gloo/projects/gloo/pkg/api/v1/enterprise/options/extauth/v1.OidcAuthorizationCode_ClientAuthentication")); err != nil {
 		return 0, err
 	}
 
 	switch m.ExchangeConfig.(type) {
 
-	case *OidcAuthorizationCode_CodeExchangeType_ClientSecret_:
+	case *OidcAuthorizationCode_ClientAuthentication_ClientSecret_:
 
 		if h, ok := interface{}(m.GetClientSecret()).(safe_hasher.SafeHasher); ok {
 			if _, err = hasher.Write([]byte("ClientSecret")); err != nil {
@@ -4339,7 +4339,7 @@ func (m *OidcAuthorizationCode_CodeExchangeType) Hash(hasher hash.Hash64) (uint6
 			}
 		}
 
-	case *OidcAuthorizationCode_CodeExchangeType_PrivateKeyJwt_:
+	case *OidcAuthorizationCode_ClientAuthentication_PrivateKeyJwt_:
 
 		if h, ok := interface{}(m.GetPrivateKeyJwt()).(safe_hasher.SafeHasher); ok {
 			if _, err = hasher.Write([]byte("PrivateKeyJwt")); err != nil {
@@ -4367,7 +4367,7 @@ func (m *OidcAuthorizationCode_CodeExchangeType) Hash(hasher hash.Hash64) (uint6
 }
 
 // Hash function
-func (m *OidcAuthorizationCode_CodeExchangeType_ClientSecret) Hash(hasher hash.Hash64) (uint64, error) {
+func (m *OidcAuthorizationCode_ClientAuthentication_ClientSecret) Hash(hasher hash.Hash64) (uint64, error) {
 	if m == nil {
 		return 0, nil
 	}
@@ -4375,7 +4375,7 @@ func (m *OidcAuthorizationCode_CodeExchangeType_ClientSecret) Hash(hasher hash.H
 		hasher = fnv.New64()
 	}
 	var err error
-	if _, err = hasher.Write([]byte("enterprise.gloo.solo.io.github.com/solo-io/gloo/projects/gloo/pkg/api/v1/enterprise/options/extauth/v1.OidcAuthorizationCode_CodeExchangeType_ClientSecret")); err != nil {
+	if _, err = hasher.Write([]byte("enterprise.gloo.solo.io.github.com/solo-io/gloo/projects/gloo/pkg/api/v1/enterprise/options/extauth/v1.OidcAuthorizationCode_ClientAuthentication_ClientSecret")); err != nil {
 		return 0, err
 	}
 
@@ -4423,7 +4423,7 @@ func (m *OidcAuthorizationCode_CodeExchangeType_ClientSecret) Hash(hasher hash.H
 }
 
 // Hash function
-func (m *OidcAuthorizationCode_CodeExchangeType_PrivateKeyJwt) Hash(hasher hash.Hash64) (uint64, error) {
+func (m *OidcAuthorizationCode_ClientAuthentication_PrivateKeyJwt) Hash(hasher hash.Hash64) (uint64, error) {
 	if m == nil {
 		return 0, nil
 	}
@@ -4431,7 +4431,7 @@ func (m *OidcAuthorizationCode_CodeExchangeType_PrivateKeyJwt) Hash(hasher hash.
 		hasher = fnv.New64()
 	}
 	var err error
-	if _, err = hasher.Write([]byte("enterprise.gloo.solo.io.github.com/solo-io/gloo/projects/gloo/pkg/api/v1/enterprise/options/extauth/v1.OidcAuthorizationCode_CodeExchangeType_PrivateKeyJwt")); err != nil {
+	if _, err = hasher.Write([]byte("enterprise.gloo.solo.io.github.com/solo-io/gloo/projects/gloo/pkg/api/v1/enterprise/options/extauth/v1.OidcAuthorizationCode_ClientAuthentication_PrivateKeyJwt")); err != nil {
 		return 0, err
 	}
 

@@ -471,16 +471,7 @@ spec:
                               type: object
                             callbackPath:
                               type: string
-                            clientId:
-                              type: string
-                            clientSecretRef:
-                              properties:
-                                name:
-                                  type: string
-                                namespace:
-                                  type: string
-                              type: object
-                            codeExchangeType:
+                            clientAuthentication:
                               properties:
                                 clientSecret:
                                   properties:
@@ -507,6 +498,15 @@ spec:
                                     validFor:
                                       type: string
                                   type: object
+                              type: object
+                            clientId:
+                              type: string
+                            clientSecretRef:
+                              properties:
+                                name:
+                                  type: string
+                                namespace:
+                                  type: string
                               type: object
                             disableClientSecret:
                               nullable: true

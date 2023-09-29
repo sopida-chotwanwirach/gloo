@@ -1465,12 +1465,12 @@ func (m *OidcAuthorizationCode) Equal(that interface{}) bool {
 		}
 	}
 
-	if h, ok := interface{}(m.GetCodeExchangeType()).(equality.Equalizer); ok {
-		if !h.Equal(target.GetCodeExchangeType()) {
+	if h, ok := interface{}(m.GetClientAuthentication()).(equality.Equalizer); ok {
+		if !h.Equal(target.GetClientAuthentication()) {
 			return false
 		}
 	} else {
-		if !proto.Equal(m.GetCodeExchangeType(), target.GetCodeExchangeType()) {
+		if !proto.Equal(m.GetClientAuthentication(), target.GetClientAuthentication()) {
 			return false
 		}
 	}
@@ -3849,14 +3849,14 @@ func (m *OidcAuthorizationCode_IdentityToken) Equal(that interface{}) bool {
 }
 
 // Equal function
-func (m *OidcAuthorizationCode_CodeExchangeType) Equal(that interface{}) bool {
+func (m *OidcAuthorizationCode_ClientAuthentication) Equal(that interface{}) bool {
 	if that == nil {
 		return m == nil
 	}
 
-	target, ok := that.(*OidcAuthorizationCode_CodeExchangeType)
+	target, ok := that.(*OidcAuthorizationCode_ClientAuthentication)
 	if !ok {
-		that2, ok := that.(OidcAuthorizationCode_CodeExchangeType)
+		that2, ok := that.(OidcAuthorizationCode_ClientAuthentication)
 		if ok {
 			target = &that2
 		} else {
@@ -3871,8 +3871,8 @@ func (m *OidcAuthorizationCode_CodeExchangeType) Equal(that interface{}) bool {
 
 	switch m.ExchangeConfig.(type) {
 
-	case *OidcAuthorizationCode_CodeExchangeType_ClientSecret_:
-		if _, ok := target.ExchangeConfig.(*OidcAuthorizationCode_CodeExchangeType_ClientSecret_); !ok {
+	case *OidcAuthorizationCode_ClientAuthentication_ClientSecret_:
+		if _, ok := target.ExchangeConfig.(*OidcAuthorizationCode_ClientAuthentication_ClientSecret_); !ok {
 			return false
 		}
 
@@ -3886,8 +3886,8 @@ func (m *OidcAuthorizationCode_CodeExchangeType) Equal(that interface{}) bool {
 			}
 		}
 
-	case *OidcAuthorizationCode_CodeExchangeType_PrivateKeyJwt_:
-		if _, ok := target.ExchangeConfig.(*OidcAuthorizationCode_CodeExchangeType_PrivateKeyJwt_); !ok {
+	case *OidcAuthorizationCode_ClientAuthentication_PrivateKeyJwt_:
+		if _, ok := target.ExchangeConfig.(*OidcAuthorizationCode_ClientAuthentication_PrivateKeyJwt_); !ok {
 			return false
 		}
 
@@ -3912,14 +3912,14 @@ func (m *OidcAuthorizationCode_CodeExchangeType) Equal(that interface{}) bool {
 }
 
 // Equal function
-func (m *OidcAuthorizationCode_CodeExchangeType_ClientSecret) Equal(that interface{}) bool {
+func (m *OidcAuthorizationCode_ClientAuthentication_ClientSecret) Equal(that interface{}) bool {
 	if that == nil {
 		return m == nil
 	}
 
-	target, ok := that.(*OidcAuthorizationCode_CodeExchangeType_ClientSecret)
+	target, ok := that.(*OidcAuthorizationCode_ClientAuthentication_ClientSecret)
 	if !ok {
-		that2, ok := that.(OidcAuthorizationCode_CodeExchangeType_ClientSecret)
+		that2, ok := that.(OidcAuthorizationCode_ClientAuthentication_ClientSecret)
 		if ok {
 			target = &that2
 		} else {
@@ -3956,14 +3956,14 @@ func (m *OidcAuthorizationCode_CodeExchangeType_ClientSecret) Equal(that interfa
 }
 
 // Equal function
-func (m *OidcAuthorizationCode_CodeExchangeType_PrivateKeyJwt) Equal(that interface{}) bool {
+func (m *OidcAuthorizationCode_ClientAuthentication_PrivateKeyJwt) Equal(that interface{}) bool {
 	if that == nil {
 		return m == nil
 	}
 
-	target, ok := that.(*OidcAuthorizationCode_CodeExchangeType_PrivateKeyJwt)
+	target, ok := that.(*OidcAuthorizationCode_ClientAuthentication_PrivateKeyJwt)
 	if !ok {
-		that2, ok := that.(OidcAuthorizationCode_CodeExchangeType_PrivateKeyJwt)
+		that2, ok := that.(OidcAuthorizationCode_ClientAuthentication_PrivateKeyJwt)
 		if ok {
 			target = &that2
 		} else {

@@ -708,7 +708,7 @@ message OidcAuthorizationCode {
     }
 
     // Configuration specific to the code exchange type used to exchange the access code for the access and id tokens.
-    message CodeExchangeType {
+    message ClientAuthentication {
         // Client Secret Exchange requires a client secret (unless it is disabled)
         message ClientSecret {
             // your client secret as registered with the issuer.
@@ -738,7 +738,7 @@ message OidcAuthorizationCode {
         }
     }
 
-    CodeExchangeType code_exchange_type = 25;
+    ClientAuthentication client_authentication = 25;
 }
 
 message PlainOAuth2 {
