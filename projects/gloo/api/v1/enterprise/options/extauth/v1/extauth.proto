@@ -569,7 +569,7 @@ message OidcAuthorizationCode {
 
     // your client secret as registered with the issuer.
     // This is required unless `disable_client_secret` is true
-    // This field has been deprecated and can be set in the client_secret option of code_exchange_type
+    // This field has been deprecated and can be set in the client_secret option of client_authentication
     core.solo.io.ResourceRef client_secret_ref = 2 [deprecated = true];
 
     // The url of the issuer. We will look for OIDC information in issuerUrl+
@@ -713,7 +713,7 @@ message OidcAuthorizationCode {
         message ClientSecret {
             // your client secret as registered with the issuer.
             // This is required unless `disable_client_secret` is true
-            core.solo.io.ResourceRef client_secret_ref = 1 [(extproto.sensitive) = true];
+            core.solo.io.ResourceRef client_secret_ref = 1;
             // If true, do not check for or use the client secret.
             // Generally the client secret is required and AuthConfigs will be rejected if it isn't set.
             // However certain implementations of the PKCE flow do not use a client secret (including Okta) so this setting allows configuring Oidc without a client secret.
@@ -723,7 +723,7 @@ message OidcAuthorizationCode {
          // Client Secret Exchange requires a signing key for the JWT and an duration for the JWT to be valid.
         message PrivateKeyJwt{
             // Signing key for the JWT used to exchange the access code for the tokens
-            core.solo.io.ResourceRef signing_key_ref = 1 [(extproto.sensitive) = true];
+            core.solo.io.ResourceRef signing_key_ref = 1;
             // Amount of time for which the JWT is valid. No maximmum is enforced, but different IDPs may impose limits on how far in 
             // the future the expiration time is allowed to be. If omitted, default is 5s.
             google.protobuf.Duration valid_for = 2;
@@ -1441,8 +1441,8 @@ message ExtAuthConfig {
         // your client id as registered with the issuer
         string client_id = 1;
 
-        // your client secret as registered with the issuer. Fully deprecated and will be ignored.
-        // Please use the client_secret_exchange_config option of the exchange_config field to configure the client secret.
+        // your client secret as registered with the issuer.
+        // Only one of client_secret or pk_jwt_exchange_config should be set. pk_jwt_exchange_config takes precedence.
         string client_secret = 2 [(extproto.sensitive) = true];
 
         // The url of the issuer. We will look for OIDC information in issuerUrl+
@@ -1546,12 +1546,18 @@ message ExtAuthConfig {
         // Configuration related to the user session.
         UserSessionConfig user_session = 20;
 
+        // Fields for private key JWT exchange.
         message PkJwtExchangeConfig{
+            // Signing key for the JWT used to exchange the access code for the tokens
             string signing_key = 1 [(extproto.sensitive) = true];
+            // Amount of time for which the JWT is valid. No maximmum is enforced, but different IDPs may impose limits on how far in 
+            // the future the expiration time is allowed to be. Defaults in 5s in front end, but expected to be set explictly here
             google.protobuf.Duration valid_for = 2;
         }
 
-        PkJwtExchangeConfig pk_jwt_exchange_config = 22;
+        // Configuration for private key JWT exchange.
+        // Only one of client_secret or pk_jwt_exchange_config should be set. pk_jwt_exchange_config takes precedence.
+        PkJwtExchangeConfig pk_jwt_exchange_config = 21;
     }
 
     message AccessTokenValidationConfig {

@@ -1,5 +1,5 @@
 changelog:
-- type: NON_USER_FACING
+- type: NEW_FEATURE
   issueLink: https://github.com/solo-io/gloo/issues/7744
-  description: Refactor the internal extauth service interface in preparation for adding PK JWT exchange support
+  description: Add a `clientAuthentication` block to the OidcAuthorizationCode config to allow for client secret and private key jwt client authentication methods
   resolvesIssue: false
