@@ -684,7 +684,7 @@ message OidcAuthorizationCode {
     // If true, do not check for or use the client secret.
     // Generally the client secret is required and AuthConfigs will be rejected if it isn't set.
     // However certain implementations of the PKCE flow do not use a client secret (including Okta) so this setting allows configuring Oidc without a client secret.
-    // This field has been deprecated and can be set in the client_secret option of code_exchange_type
+    // This field has been deprecated and can be set in the client_secret option of client_authentication
     google.protobuf.BoolValue disable_client_secret = 21 [deprecated = true];
 
     // Optional: Configuration specific to the OAuth2 access token received and processed by the ext-auth-service.

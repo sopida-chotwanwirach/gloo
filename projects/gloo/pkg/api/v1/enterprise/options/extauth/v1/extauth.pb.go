@@ -2214,7 +2214,7 @@ type OidcAuthorizationCode struct {
 	// If true, do not check for or use the client secret.
 	// Generally the client secret is required and AuthConfigs will be rejected if it isn't set.
 	// However certain implementations of the PKCE flow do not use a client secret (including Okta) so this setting allows configuring Oidc without a client secret.
-	// This field has been deprecated and can be set in the client_secret option of code_exchange_type
+	// This field has been deprecated and can be set in the client_secret option of client_authentication
 	//
 	// Deprecated: Marked as deprecated in github.com/solo-io/gloo/projects/gloo/api/v1/enterprise/options/extauth/v1/extauth.proto.
 	DisableClientSecret *wrappers.BoolValue `protobuf:"bytes,21,opt,name=disable_client_secret,json=disableClientSecret,proto3" json:"disable_client_secret,omitempty"`
