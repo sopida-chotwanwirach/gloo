@@ -5900,7 +5900,7 @@ type OidcAuthorizationCode_ClientAuthentication_PrivateKeyJwt struct {
 	// Signing key for the JWT used to exchange the access code for the tokens
 	SigningKeyRef *core.ResourceRef `protobuf:"bytes,1,opt,name=signing_key_ref,json=signingKeyRef,proto3" json:"signing_key_ref,omitempty"`
 	// Amount of time for which the JWT is valid. No maximmum is enforced, but different IDPs may impose limits on how far in
-	// the future the expiration time is allowed to be. If omitted, default is 60s.
+	// the future the expiration time is allowed to be. If omitted, default is 5s.
 	ValidFor *duration.Duration `protobuf:"bytes,2,opt,name=valid_for,json=validFor,proto3" json:"valid_for,omitempty"`
 }
 

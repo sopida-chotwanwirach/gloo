@@ -1058,7 +1058,7 @@ Client Secret Exchange requires a signing key for the JWT and an duration for th
 | Field | Type | Description |
 | ----- | ---- | ----------- | 
 | `signingKeyRef` | [.core.solo.io.ResourceRef](../../../../../../../../../../solo-kit/api/v1/ref.proto.sk/#resourceref) | Signing key for the JWT used to exchange the access code for the tokens. |
-| `validFor` | [.google.protobuf.Duration](https://developers.google.com/protocol-buffers/docs/reference/csharp/class/google/protobuf/well-known-types/duration) | Amount of time for which the JWT is valid. No maximmum is enforced, but different IDPs may impose limits on how far in the future the expiration time is allowed to be. If omitted, default is 60s. |
+| `validFor` | [.google.protobuf.Duration](https://developers.google.com/protocol-buffers/docs/reference/csharp/class/google/protobuf/well-known-types/duration) | Amount of time for which the JWT is valid. No maximmum is enforced, but different IDPs may impose limits on how far in the future the expiration time is allowed to be. If omitted, default is 5s. |
 
 
 
