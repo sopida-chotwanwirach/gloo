@@ -1007,7 +1007,7 @@ Optional: Map a single claim from an OIDC identity token to a header in the requ
 ### ClientAuthentication
 
  
-Configuration specific to the code exchange type used to exchange the access code for the access and id tokens.
+Configuration specific to the client authentication type used to exchange the access code for the access and id tokens.
 
 ```yaml
 "clientSecret": .enterprise.gloo.solo.io.OidcAuthorizationCode.ClientAuthentication.ClientSecret
@@ -1017,8 +1017,8 @@ Configuration specific to the code exchange type used to exchange the access cod
 
 | Field | Type | Description |
 | ----- | ---- | ----------- | 
-| `clientSecret` | [.enterprise.gloo.solo.io.OidcAuthorizationCode.ClientAuthentication.ClientSecret](../extauth.proto.sk/#clientsecret) | Use the client secret method to exchange the access code for the tokens. Only one of `clientSecret` or `privateKeyJwt` can be set. |
-| `privateKeyJwt` | [.enterprise.gloo.solo.io.OidcAuthorizationCode.ClientAuthentication.PrivateKeyJwt](../extauth.proto.sk/#privatekeyjwt) | Use the private ket JWT method to exchange the access code for the tokens. Only one of `privateKeyJwt` or `clientSecret` can be set. |
+| `clientSecret` | [.enterprise.gloo.solo.io.OidcAuthorizationCode.ClientAuthentication.ClientSecret](../extauth.proto.sk/#clientsecret) | Use the client secret method to authenticate the client. Only one of `clientSecret` or `privateKeyJwt` can be set. |
+| `privateKeyJwt` | [.enterprise.gloo.solo.io.OidcAuthorizationCode.ClientAuthentication.PrivateKeyJwt](../extauth.proto.sk/#privatekeyjwt) | Use the private ket JWT method to authenticate the client. Only one of `privateKeyJwt` or `clientSecret` can be set. |
 
 
 
@@ -1027,7 +1027,7 @@ Configuration specific to the code exchange type used to exchange the access cod
 ### ClientSecret
 
  
-Client Secret Exchange requires a client secret (unless it is disabled)
+Client Secret Authentication requires a client secret (unless it is disabled)
 
 ```yaml
 "clientSecretRef": .core.solo.io.ResourceRef
@@ -1047,7 +1047,7 @@ Client Secret Exchange requires a client secret (unless it is disabled)
 ### PrivateKeyJwt
 
  
-Client Secret Exchange requires a signing key for the JWT and an duration for the JWT to be valid.
+Private Key JWT Authentication requires a signing key for the JWT and an duration for the JWT to be valid.
 
 ```yaml
 "signingKeyRef": .core.solo.io.ResourceRef
@@ -1057,7 +1057,7 @@ Client Secret Exchange requires a signing key for the JWT and an duration for th
 
 | Field | Type | Description |
 | ----- | ---- | ----------- | 
-| `signingKeyRef` | [.core.solo.io.ResourceRef](../../../../../../../../../../solo-kit/api/v1/ref.proto.sk/#resourceref) | Signing key for the JWT used to exchange the access code for the tokens. |
+| `signingKeyRef` | [.core.solo.io.ResourceRef](../../../../../../../../../../solo-kit/api/v1/ref.proto.sk/#resourceref) | Signing key for the JWT used to authenticate the client. |
 | `validFor` | [.google.protobuf.Duration](https://developers.google.com/protocol-buffers/docs/reference/csharp/class/google/protobuf/well-known-types/duration) | Amount of time for which the JWT is valid. No maximmum is enforced, but different IDPs may impose limits on how far in the future the expiration time is allowed to be. If omitted, default is 5s. |
 
 

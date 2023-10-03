@@ -4315,7 +4315,7 @@ func (m *OidcAuthorizationCode_ClientAuthentication) Hash(hasher hash.Hash64) (u
 		return 0, err
 	}
 
-	switch m.ExchangeConfig.(type) {
+	switch m.ClientAuthenticationConfig.(type) {
 
 	case *OidcAuthorizationCode_ClientAuthentication_ClientSecret_:
 

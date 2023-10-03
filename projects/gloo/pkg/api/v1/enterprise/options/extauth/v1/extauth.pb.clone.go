@@ -2302,16 +2302,16 @@ func (m *OidcAuthorizationCode_ClientAuthentication) Clone() proto.Message {
 	}
 	target = &OidcAuthorizationCode_ClientAuthentication{}
 
-	switch m.ExchangeConfig.(type) {
+	switch m.ClientAuthenticationConfig.(type) {
 
 	case *OidcAuthorizationCode_ClientAuthentication_ClientSecret_:
 
 		if h, ok := interface{}(m.GetClientSecret()).(clone.Cloner); ok {
-			target.ExchangeConfig = &OidcAuthorizationCode_ClientAuthentication_ClientSecret_{
+			target.ClientAuthenticationConfig = &OidcAuthorizationCode_ClientAuthentication_ClientSecret_{
 				ClientSecret: h.Clone().(*OidcAuthorizationCode_ClientAuthentication_ClientSecret),
 			}
 		} else {
-			target.ExchangeConfig = &OidcAuthorizationCode_ClientAuthentication_ClientSecret_{
+			target.ClientAuthenticationConfig = &OidcAuthorizationCode_ClientAuthentication_ClientSecret_{
 				ClientSecret: proto.Clone(m.GetClientSecret()).(*OidcAuthorizationCode_ClientAuthentication_ClientSecret),
 			}
 		}
@@ -2319,11 +2319,11 @@ func (m *OidcAuthorizationCode_ClientAuthentication) Clone() proto.Message {
 	case *OidcAuthorizationCode_ClientAuthentication_PrivateKeyJwt_:
 
 		if h, ok := interface{}(m.GetPrivateKeyJwt()).(clone.Cloner); ok {
-			target.ExchangeConfig = &OidcAuthorizationCode_ClientAuthentication_PrivateKeyJwt_{
+			target.ClientAuthenticationConfig = &OidcAuthorizationCode_ClientAuthentication_PrivateKeyJwt_{
 				PrivateKeyJwt: h.Clone().(*OidcAuthorizationCode_ClientAuthentication_PrivateKeyJwt),
 			}
 		} else {
-			target.ExchangeConfig = &OidcAuthorizationCode_ClientAuthentication_PrivateKeyJwt_{
+			target.ClientAuthenticationConfig = &OidcAuthorizationCode_ClientAuthentication_PrivateKeyJwt_{
 				PrivateKeyJwt: proto.Clone(m.GetPrivateKeyJwt()).(*OidcAuthorizationCode_ClientAuthentication_PrivateKeyJwt),
 			}
 		}

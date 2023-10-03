@@ -707,9 +707,9 @@ message OidcAuthorizationCode {
         repeated ClaimToHeader claims_to_headers = 1;
     }
 
-    // Configuration specific to the code exchange type used to exchange the access code for the access and id tokens.
+    // Configuration specific to the client authentication type used to exchange the access code for the access and id tokens.
     message ClientAuthentication {
-        // Client Secret Exchange requires a client secret (unless it is disabled)
+        // Client Secret Authentication requires a client secret (unless it is disabled)
         message ClientSecret {
             // your client secret as registered with the issuer.
             // This is required unless `disable_client_secret` is true
@@ -720,20 +720,20 @@ message OidcAuthorizationCode {
             google.protobuf.BoolValue disable_client_secret = 2;
         }
 
-         // Client Secret Exchange requires a signing key for the JWT and an duration for the JWT to be valid.
+         // Private Key JWT Authentication requires a signing key for the JWT and an duration for the JWT to be valid.
         message PrivateKeyJwt{
-            // Signing key for the JWT used to exchange the access code for the tokens
+            // Signing key for the JWT used to authenticate the client
             core.solo.io.ResourceRef signing_key_ref = 1;
             // Amount of time for which the JWT is valid. No maximmum is enforced, but different IDPs may impose limits on how far in 
             // the future the expiration time is allowed to be. If omitted, default is 5s.
             google.protobuf.Duration valid_for = 2;
         }
 
-        // Configure how to exchange the access code for the tokens
-        oneof exchange_config {
-            // Use the client secret method to exchange the access code for the tokens
+        // Configure how to authenticate the client
+        oneof client_authentication_config {
+            // Use the client secret method to authenticate the client
             ClientSecret client_secret = 1;
-            // Use the private ket JWT method to exchange the access code for the tokens
+            // Use the private ket JWT method to authenticate the client
             PrivateKeyJwt private_key_jwt = 2;
         }
     }

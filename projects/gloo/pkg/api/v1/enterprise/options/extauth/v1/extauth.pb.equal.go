@@ -3869,10 +3869,10 @@ func (m *OidcAuthorizationCode_ClientAuthentication) Equal(that interface{}) boo
 		return false
 	}
 
-	switch m.ExchangeConfig.(type) {
+	switch m.ClientAuthenticationConfig.(type) {
 
 	case *OidcAuthorizationCode_ClientAuthentication_ClientSecret_:
-		if _, ok := target.ExchangeConfig.(*OidcAuthorizationCode_ClientAuthentication_ClientSecret_); !ok {
+		if _, ok := target.ClientAuthenticationConfig.(*OidcAuthorizationCode_ClientAuthentication_ClientSecret_); !ok {
 			return false
 		}
 
@@ -3887,7 +3887,7 @@ func (m *OidcAuthorizationCode_ClientAuthentication) Equal(that interface{}) boo
 		}
 
 	case *OidcAuthorizationCode_ClientAuthentication_PrivateKeyJwt_:
-		if _, ok := target.ExchangeConfig.(*OidcAuthorizationCode_ClientAuthentication_PrivateKeyJwt_); !ok {
+		if _, ok := target.ClientAuthenticationConfig.(*OidcAuthorizationCode_ClientAuthentication_PrivateKeyJwt_); !ok {
 			return false
 		}
 
@@ -3903,7 +3903,7 @@ func (m *OidcAuthorizationCode_ClientAuthentication) Equal(that interface{}) boo
 
 	default:
 		// m is nil but target is not nil
-		if m.ExchangeConfig != target.ExchangeConfig {
+		if m.ClientAuthenticationConfig != target.ClientAuthenticationConfig {
 			return false
 		}
 	}
