@@ -2857,10 +2857,10 @@ func (m *ExtAuthConfig_OidcAuthorizationCodeConfig) Clone() proto.Message {
 		target.UserSession = proto.Clone(m.GetUserSession()).(*ExtAuthConfig_UserSessionConfig)
 	}
 
-	if h, ok := interface{}(m.GetPkJwtExchangeConfig()).(clone.Cloner); ok {
-		target.PkJwtExchangeConfig = h.Clone().(*ExtAuthConfig_OidcAuthorizationCodeConfig_PkJwtExchangeConfig)
+	if h, ok := interface{}(m.GetPkJwtClientAuthenticationConfig()).(clone.Cloner); ok {
+		target.PkJwtClientAuthenticationConfig = h.Clone().(*ExtAuthConfig_OidcAuthorizationCodeConfig_PkJwtClientAuthenticationConfig)
 	} else {
-		target.PkJwtExchangeConfig = proto.Clone(m.GetPkJwtExchangeConfig()).(*ExtAuthConfig_OidcAuthorizationCodeConfig_PkJwtExchangeConfig)
+		target.PkJwtClientAuthenticationConfig = proto.Clone(m.GetPkJwtClientAuthenticationConfig()).(*ExtAuthConfig_OidcAuthorizationCodeConfig_PkJwtClientAuthenticationConfig)
 	}
 
 	return target
@@ -3469,12 +3469,12 @@ func (m *ExtAuthConfig_UserSessionConfig_CipherConfig) Clone() proto.Message {
 }
 
 // Clone function
-func (m *ExtAuthConfig_OidcAuthorizationCodeConfig_PkJwtExchangeConfig) Clone() proto.Message {
-	var target *ExtAuthConfig_OidcAuthorizationCodeConfig_PkJwtExchangeConfig
+func (m *ExtAuthConfig_OidcAuthorizationCodeConfig_PkJwtClientAuthenticationConfig) Clone() proto.Message {
+	var target *ExtAuthConfig_OidcAuthorizationCodeConfig_PkJwtClientAuthenticationConfig
 	if m == nil {
 		return target
 	}
-	target = &ExtAuthConfig_OidcAuthorizationCodeConfig_PkJwtExchangeConfig{}
+	target = &ExtAuthConfig_OidcAuthorizationCodeConfig_PkJwtClientAuthenticationConfig{}
 
 	target.SigningKey = m.GetSigningKey()
 

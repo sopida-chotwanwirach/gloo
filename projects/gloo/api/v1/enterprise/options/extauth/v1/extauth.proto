@@ -1442,7 +1442,7 @@ message ExtAuthConfig {
         string client_id = 1;
 
         // your client secret as registered with the issuer.
-        // Only one of client_secret or pk_jwt_exchange_config should be set. pk_jwt_exchange_config takes precedence.
+        // Only one of client_secret or pk_jwt_client_authentication_config should be set. pk_jwt_client_authentication_config takes precedence.
         string client_secret = 2 [(extproto.sensitive) = true];
 
         // The url of the issuer. We will look for OIDC information in issuerUrl+
@@ -1546,18 +1546,18 @@ message ExtAuthConfig {
         // Configuration related to the user session.
         UserSessionConfig user_session = 20;
 
-        // Fields for private key JWT exchange.
-        message PkJwtExchangeConfig{
-            // Signing key for the JWT used to exchange the access code for the tokens
+        // Fields for private key JWT Client Authentication.
+        message PkJwtClientAuthenticationConfig{
+            // Signing key for the JWT used for client authentication
             string signing_key = 1 [(extproto.sensitive) = true];
             // Amount of time for which the JWT is valid. No maximmum is enforced, but different IDPs may impose limits on how far in 
             // the future the expiration time is allowed to be. Defaults in 5s in front end, but expected to be set explictly here
             google.protobuf.Duration valid_for = 2;
         }
 
-        // Configuration for private key JWT exchange.
-        // Only one of client_secret or pk_jwt_exchange_config should be set. pk_jwt_exchange_config takes precedence.
-        PkJwtExchangeConfig pk_jwt_exchange_config = 21;
+        // Configuration for private key JWT client authentication.
+        // Only one of client_secret or pk_jwt_client_authentication_config should be set. pk_jwt_client_authentication_config takes precedence.
+        PkJwtClientAuthenticationConfig pk_jwt_client_authentication_config = 21;
     }
 
     message AccessTokenValidationConfig {

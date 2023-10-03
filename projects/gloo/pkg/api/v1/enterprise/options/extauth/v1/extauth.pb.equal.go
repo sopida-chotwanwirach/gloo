@@ -4839,12 +4839,12 @@ func (m *ExtAuthConfig_OidcAuthorizationCodeConfig) Equal(that interface{}) bool
 		}
 	}
 
-	if h, ok := interface{}(m.GetPkJwtExchangeConfig()).(equality.Equalizer); ok {
-		if !h.Equal(target.GetPkJwtExchangeConfig()) {
+	if h, ok := interface{}(m.GetPkJwtClientAuthenticationConfig()).(equality.Equalizer); ok {
+		if !h.Equal(target.GetPkJwtClientAuthenticationConfig()) {
 			return false
 		}
 	} else {
-		if !proto.Equal(m.GetPkJwtExchangeConfig(), target.GetPkJwtExchangeConfig()) {
+		if !proto.Equal(m.GetPkJwtClientAuthenticationConfig(), target.GetPkJwtClientAuthenticationConfig()) {
 			return false
 		}
 	}
@@ -5813,14 +5813,14 @@ func (m *ExtAuthConfig_UserSessionConfig_CipherConfig) Equal(that interface{}) b
 }
 
 // Equal function
-func (m *ExtAuthConfig_OidcAuthorizationCodeConfig_PkJwtExchangeConfig) Equal(that interface{}) bool {
+func (m *ExtAuthConfig_OidcAuthorizationCodeConfig_PkJwtClientAuthenticationConfig) Equal(that interface{}) bool {
 	if that == nil {
 		return m == nil
 	}
 
-	target, ok := that.(*ExtAuthConfig_OidcAuthorizationCodeConfig_PkJwtExchangeConfig)
+	target, ok := that.(*ExtAuthConfig_OidcAuthorizationCodeConfig_PkJwtClientAuthenticationConfig)
 	if !ok {
-		that2, ok := that.(ExtAuthConfig_OidcAuthorizationCodeConfig_PkJwtExchangeConfig)
+		that2, ok := that.(ExtAuthConfig_OidcAuthorizationCodeConfig_PkJwtClientAuthenticationConfig)
 		if ok {
 			target = &that2
 		} else {
