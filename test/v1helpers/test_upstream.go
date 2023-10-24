@@ -212,6 +212,13 @@ func runTestServerWithHealthReply(ctx context.Context, reply, healthReply string
 
 		reqChan <- &rr
 
+		// Copy the request headers to the response
+		for headerName, headerValues := range r.Header {
+			for _, headerValue := range headerValues {
+				rw.Header().Set(headerName, headerValue)
+			}
+		}
+
 		if retresp := waitIfNecessary(r); retresp != nil {
 			rw.WriteHeader(retresp.Code)
 			rw.Write(retresp.Body)
