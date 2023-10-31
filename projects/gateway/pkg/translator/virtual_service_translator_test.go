@@ -106,10 +106,22 @@ var _ = Describe("Virtual Service Translator", func() {
 				}).
 				Build()
 
+			vsSouth := helpers.NewVirtualServiceBuilder().
+				WithName("vs-south").
+				WithDomain("south.com").
+				WithNamespace(namespace).
+				WithDelegateOptionRefs([]*core.ResourceRef{
+					// none!
+				}).
+				WithRouteDirectResponseAction("test", &gloov1.DirectResponseAction{
+					Status: 200,
+				}).
+				Build()
+
 			snapshot = &gloov1snap.ApiSnapshot{
 				Gateways: v1.GatewayList{},
 				VirtualServices: v1.VirtualServiceList{
-					vsEast, vsWest,
+					vsEast, vsWest, vsSouth,
 				},
 				VirtualHostOptions: v1.VirtualHostOptionList{
 					optionEastOne, optionEastTwo, optionWestOne, optionWestTwo,
@@ -125,6 +137,9 @@ var _ = Describe("Virtual Service Translator", func() {
 			// This demonstrates that the VirtualHostOptions are merged
 			// Even though we have 2 VirtualHostOptions, each with 1 RequestHeaderToAdd, those are merged, and we respect the first definition
 			// This is how the feature was built, and I would consider it a feature to have the ability to append headers when consolidating options
+			// I could see us expanding this delegation API in 2 directions:
+			// 	1. Allow a MergePolicy to be applied, which dictates how to merge 2 objects and how inheritance works
+			//	2. Allow Options to limit the scope of their delegation, so that they only apply to certain resources. This way delegation has a handshake and both parties have to agree to it
 			virtualHostEast := virtualHosts[0]
 			Expect(virtualHostEast.GetDomains()).To(ConsistOf("east.com"))
 			Expect(virtualHostEast.GetOptions().GetHeaderManipulation().GetRequestHeadersToAdd()).To(HaveLen(1))
@@ -136,6 +151,11 @@ var _ = Describe("Virtual Service Translator", func() {
 			Expect(virtualHostWest.GetOptions().GetHeaderManipulation().GetRequestHeadersToAdd()).To(HaveLen(1))
 			Expect(virtualHostWest.GetOptions().GetHeaderManipulation().GetRequestHeadersToAdd()[0].GetHeader().GetKey()).To(Equal("x-custom-header-west-one"))
 			Expect(virtualHostWest.GetOptions().GetExtauth().GetConfigRef().GetName()).To(Equal("west-two"))
+
+			virtualHostSouth := virtualHosts[2]
+			Expect(virtualHostSouth.GetDomains()).To(ConsistOf("south.com"))
+			Expect(virtualHostSouth.GetOptions().GetHeaderManipulation()).To(BeNil(), "no header manipulation defined")
+			Expect(virtualHostSouth.GetOptions().GetExtauth()).To(BeNil(), "no extauth defined")
 		})
 
 	})
