@@ -72,6 +72,30 @@ func (e *emptyRouteConfigurationTranslator) ComputeRouteConfiguration(params plu
 	return []*envoy_config_route_v3.RouteConfiguration{}
 }
 
+type HttpTranslatorParams struct {
+	PluginRegistry           plugins.PluginRegistry
+	Proxy                    *v1.Proxy
+	ParentListener           *v1.Listener
+	Listener                 *v1.HttpListener
+	ParentReport             *validationapi.ListenerReport
+	Report                   *validationapi.HttpListenerReport
+	RouteConfigName          string
+	RequireTlsOnVirtualHosts bool
+}
+
+func NewHttpTranslator(params HttpTranslatorParams) RouteConfigurationTranslator {
+	return &httpRouteConfigurationTranslator{
+		pluginRegistry:           params.PluginRegistry,
+		proxy:                    params.Proxy,
+		parentListener:           params.ParentListener,
+		listener:                 params.Listener,
+		parentReport:             params.ParentReport,
+		report:                   params.Report,
+		routeConfigName:          params.RouteConfigName,
+		requireTlsOnVirtualHosts: params.RequireTlsOnVirtualHosts,
+	}
+}
+
 type httpRouteConfigurationTranslator struct {
 	pluginRegistry           plugins.PluginRegistry
 	proxy                    *v1.Proxy
