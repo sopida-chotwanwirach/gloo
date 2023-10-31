@@ -18,22 +18,24 @@ type VirtualServiceBuilder struct {
 	namespace string
 	labels    map[string]string
 
-	domains            []string
-	virtualHostOptions *gloov1.VirtualHostOptions
-	routesByName       map[string]*v1.Route
-	sslConfig          *ssl.SslConfig
+	domains                []string
+	virtualHostOptions     *gloov1.VirtualHostOptions
+	delegateOptionsRefList []*core.ResourceRef
+	routesByName           map[string]*v1.Route
+	sslConfig              *ssl.SslConfig
 }
 
 // BuilderFromVirtualService creates a new VirtualServiceBuilder from an existing VirtualService
 func BuilderFromVirtualService(vs *v1.VirtualService) *VirtualServiceBuilder {
 	builder := &VirtualServiceBuilder{
-		name:               vs.GetMetadata().GetName(),
-		namespace:          vs.GetMetadata().GetNamespace(),
-		labels:             vs.GetMetadata().GetLabels(),
-		domains:            vs.GetVirtualHost().GetDomains(),
-		virtualHostOptions: vs.GetVirtualHost().GetOptions(),
-		sslConfig:          vs.GetSslConfig(),
-		routesByName:       make(map[string]*v1.Route, len(vs.GetVirtualHost().GetRoutes())),
+		name:                   vs.GetMetadata().GetName(),
+		namespace:              vs.GetMetadata().GetNamespace(),
+		labels:                 vs.GetMetadata().GetLabels(),
+		domains:                vs.GetVirtualHost().GetDomains(),
+		virtualHostOptions:     vs.GetVirtualHost().GetOptions(),
+		delegateOptionsRefList: vs.GetVirtualHost().GetOptionsConfigRefs().GetDelegateOptions(),
+		sslConfig:              vs.GetSslConfig(),
+		routesByName:           make(map[string]*v1.Route, len(vs.GetVirtualHost().GetRoutes())),
 	}
 	for _, r := range vs.GetVirtualHost().GetRoutes() {
 		builder.WithRoute(r.GetName(), r)
@@ -80,6 +82,11 @@ func (b *VirtualServiceBuilder) WithDomains(domains []string) *VirtualServiceBui
 
 func (b *VirtualServiceBuilder) WithVirtualHostOptions(virtualHostOptions *gloov1.VirtualHostOptions) *VirtualServiceBuilder {
 	b.virtualHostOptions = virtualHostOptions
+	return b
+}
+
+func (b *VirtualServiceBuilder) WithDelegateOptionRefs(delegateOptionsRefList []*core.ResourceRef) *VirtualServiceBuilder {
+	b.delegateOptionsRefList = delegateOptionsRefList
 	return b
 }
 
@@ -238,6 +245,7 @@ func (b *VirtualServiceBuilder) Clone() *VirtualServiceBuilder {
 	clone.domains = nil
 	clone.domains = append(clone.domains, b.domains...)
 	clone.virtualHostOptions = b.virtualHostOptions.Clone().(*gloov1.VirtualHostOptions)
+	clone.delegateOptionsRefList = b.delegateOptionsRefList
 	clone.routesByName = make(map[string]*v1.Route, len(b.routesByName))
 	for key, value := range b.routesByName {
 		clone.routesByName[key] = value.Clone().(*v1.Route)
@@ -269,6 +277,11 @@ func (b *VirtualServiceBuilder) Build() *v1.VirtualService {
 			Domains: b.domains,
 			Routes:  routes,
 			Options: b.virtualHostOptions,
+			ExternalOptionsConfig: &v1.VirtualHost_OptionsConfigRefs{
+				OptionsConfigRefs: &v1.DelegateOptionsRefs{
+					DelegateOptions: b.delegateOptionsRefList,
+				},
+			},
 		},
 		SslConfig: b.sslConfig,
 	}
