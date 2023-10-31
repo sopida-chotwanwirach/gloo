@@ -35,6 +35,9 @@ var (
 	}
 )
 
+// ExtAuthzConfigGenerator is responsible for generating the ext_authz filter configuration for a various resources
+// It is responsible for generating the configuration for the listener, virtual host, route, and weighted destination.
+// It assumes that the calling code (likely a plugin) has already determined that the ext_authz filter should be configured
 type ExtAuthzConfigGenerator interface {
 	IsMulti() bool
 	GenerateListenerExtAuthzConfig(listener *v1.HttpListener, upstreams v1.UpstreamList) ([]*envoyauth.ExtAuthz, error)
@@ -89,6 +92,8 @@ func (d *DefaultConfigGenerator) GenerateListenerExtAuthzConfig(listener *v1.Htt
 func (d *DefaultConfigGenerator) GenerateVirtualHostExtAuthzConfig(virtualHost *v1.VirtualHost, params plugins.VirtualHostParams) (*envoyauth.ExtAuthzPerRoute, error) {
 	extension := virtualHost.GetOptions().GetExtauth()
 	if extension == nil {
+		// This code is executed only if a ext_authz filter is configured on the FilterChain
+		// If there is no extension defined for the virtual host, we disable authz for this virtual host
 		return GetDisabledAuth(), nil
 	}
 
@@ -117,6 +122,9 @@ func (d *DefaultConfigGenerator) GenerateVirtualHostExtAuthzConfig(virtualHost *
 func (d *DefaultConfigGenerator) GenerateRouteExtAuthzConfig(route *v1.Route) (*envoyauth.ExtAuthzPerRoute, error) {
 	extension := route.GetOptions().GetExtauth()
 	if extension == nil {
+		// This logic is different from that of the VirtualHost
+		// If no extension is defined, we don't need to configure PerRoute configuration for this Route,
+		// and the route will just inherit the VirtualHost configuration
 		return nil, nil
 	}
 
@@ -145,6 +153,9 @@ func (d *DefaultConfigGenerator) GenerateRouteExtAuthzConfig(route *v1.Route) (*
 func (d *DefaultConfigGenerator) GenerateWeightedDestinationExtAuthzConfig(weightedDestination *v1.WeightedDestination) (*envoyauth.ExtAuthzPerRoute, error) {
 	extension := weightedDestination.GetOptions().GetExtauth()
 	if extension == nil {
+		// This logic is different from that of the VirtualHost
+		// If no extension is defined, we don't need to configure PerRoute configuration for this WeightedDestination,
+		// and the destination will just inherit the VirtualHost configuration
 		return nil, nil
 	}
 
