@@ -6,6 +6,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/golang/protobuf/proto"
+
 	"github.com/solo-io/gloo/projects/gloo/pkg/api/v1/gloosnapshot"
 
 	"github.com/golang/protobuf/ptypes/wrappers"
@@ -284,13 +286,16 @@ func (v *VirtualServiceTranslator) computeHttpListenerVirtualHosts(params Params
 
 func (v *VirtualServiceTranslator) virtualServiceToVirtualHost(vs *v1.VirtualService, gateway *v1.Gateway, proxyName string, snapshot *gloosnapshot.ApiSnapshot, reports reporter.ResourceReports) (*gloov1.VirtualHost, error) {
 	converter := NewRouteConverter(NewRouteTableSelector(snapshot.RouteTables), NewRouteTableIndexer())
-	v.mergeDelegatedVirtualHostOptions(vs, snapshot.VirtualHostOptions, reports)
+
+	// sam-heilbron: cleanup
+	mergedOptions := v.mergeDelegatedVirtualHostOptions(vs, snapshot.VirtualHostOptions, reports)
+
 	routes := converter.ConvertVirtualService(vs, gateway, proxyName, snapshot, reports)
 	vh := &gloov1.VirtualHost{
 		Name:    VirtualHostName(vs),
 		Domains: vs.GetVirtualHost().GetDomains(),
 		Routes:  routes,
-		Options: vs.GetVirtualHost().GetOptions(),
+		Options: mergedOptions,
 	}
 
 	validateRoutesRegex(vs, vh, reports)
@@ -308,7 +313,9 @@ func (v *VirtualServiceTranslator) virtualServiceToVirtualHost(vs *v1.VirtualSer
 }
 
 // finds delegated VirtualHostOption Objects and merges the options into the virtual service
-func (v *VirtualServiceTranslator) mergeDelegatedVirtualHostOptions(vs *v1.VirtualService, options v1.VirtualHostOptionList, reports reporter.ResourceReports) {
+func (v *VirtualServiceTranslator) mergeDelegatedVirtualHostOptions(vs *v1.VirtualService, options v1.VirtualHostOptionList, reports reporter.ResourceReports) *gloov1.VirtualHostOptions {
+	mergedOptions := proto.Clone(vs.GetVirtualHost().GetOptions()).(*gloov1.VirtualHostOptions)
+
 	optionRefs := vs.GetVirtualHost().GetOptionsConfigRefs().GetDelegateOptions()
 	for _, optionRef := range optionRefs {
 		vhOption, err := options.Find(optionRef.GetNamespace(), optionRef.GetName())
@@ -318,12 +325,10 @@ func (v *VirtualServiceTranslator) mergeDelegatedVirtualHostOptions(vs *v1.Virtu
 			reports.AddWarning(vs, err.Error())
 			continue
 		}
-		if vs.GetVirtualHost().GetOptions() == nil {
-			vs.GetVirtualHost().Options = vhOption.GetOptions()
-			continue
-		}
-		vs.GetVirtualHost().Options = mergeVirtualHostOptions(vs.GetVirtualHost().GetOptions(), vhOption.GetOptions())
+		mergedOptions = mergeVirtualHostOptions(mergedOptions, vhOption.GetOptions())
 	}
+
+	return mergedOptions
 }
 
 func VirtualHostName(vs *v1.VirtualService) string {

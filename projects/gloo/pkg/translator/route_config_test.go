@@ -3,6 +3,9 @@ package translator_test
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
+
 	routev3 "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
 	envoyauth "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/ext_authz/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/wellknown"
@@ -18,8 +21,6 @@ import (
 	"github.com/solo-io/gloo/projects/gloo/pkg/utils/validation"
 	core2 "github.com/solo-io/solo-kit/pkg/api/external/envoy/api/v2/core"
 	"github.com/solo-io/solo-kit/pkg/api/v1/resources/core"
-	"strconv"
-	"strings"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"

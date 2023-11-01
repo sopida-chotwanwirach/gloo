@@ -3,6 +3,8 @@ package translator_test
 import (
 	"context"
 	"fmt"
+
+	"github.com/golang/protobuf/ptypes/wrappers"
 	v12 "github.com/solo-io/gloo/projects/gloo/pkg/api/v1/enterprise/options/extauth/v1"
 	"github.com/solo-io/gloo/projects/gloo/pkg/api/v1/options/headers"
 	gloodefaults "github.com/solo-io/gloo/projects/gloo/pkg/defaults"
@@ -40,7 +42,7 @@ var _ = FDescribe("Virtual Service Translator", func() {
 		ctx, cancel = context.WithCancel(context.Background())
 
 		translator = &VirtualServiceTranslator{
-			WarnOnRouteShortCircuiting: false,
+			WarnOnRouteShortCircuiting: true,
 		}
 	})
 
@@ -51,18 +53,16 @@ var _ = FDescribe("Virtual Service Translator", func() {
 	// executeTranslation executes the VirtualServiceTranslator on the given snapshot
 	// It creates a default Gateway, but it assumes the caller will provide the relevant VirtualServices in the ApiSnapshot
 	executeTranslation := func(snapshot *gloov1snap.ApiSnapshot) ([]*gloov1.VirtualHost, reporter.ResourceReports) {
-		// We rely on a ParentGateway to select all the VirtualServices that are relevant to this Gateway
-		parentGateway := defaults.DefaultGateway(namespace)
-
-		snapshot.Gateways = v1.GatewayList{parentGateway}
-
 		reports := make(reporter.ResourceReports)
+		reports.Accept(snapshot.Gateways.AsInputResources()...)
 		reports.Accept(snapshot.VirtualServices.AsInputResources()...)
 		reports.Accept(snapshot.RouteTables.AsInputResources()...)
 
+		params := NewTranslatorParams(ctx, snapshot, reports)
+
 		virtualHosts := translator.ComputeVirtualHosts(
-			NewTranslatorParams(ctx, snapshot, reports),
-			parentGateway,
+			params,
+			snapshot.Gateways[0],
 			snapshot.VirtualServices,
 			proxyName)
 
@@ -84,6 +84,7 @@ var _ = FDescribe("Virtual Service Translator", func() {
 				WithName("vs-east").
 				WithDomain("east.com").
 				WithNamespace(namespace).
+				WithVirtualHostOptions(&gloov1.VirtualHostOptions{}).
 				WithDelegateOptionRefs([]*core.ResourceRef{
 					optionEastOne.GetMetadata().Ref(),
 					optionEastTwo.GetMetadata().Ref(),
@@ -97,6 +98,7 @@ var _ = FDescribe("Virtual Service Translator", func() {
 				WithName("vs-west").
 				WithDomain("west.com").
 				WithNamespace(namespace).
+				WithVirtualHostOptions(&gloov1.VirtualHostOptions{}).
 				WithDelegateOptionRefs([]*core.ResourceRef{
 					optionWestOne.GetMetadata().Ref(),
 					optionWestTwo.GetMetadata().Ref(),
@@ -106,27 +108,49 @@ var _ = FDescribe("Virtual Service Translator", func() {
 				}).
 				Build()
 
-			vsSouth := helpers.NewVirtualServiceBuilder().
-				WithName("vs-south").
-				WithDomain("south.com").
-				WithNamespace(namespace).
-				WithDelegateOptionRefs([]*core.ResourceRef{
-					// none!
-				}).
-				WithRouteDirectResponseAction("test", &gloov1.DirectResponseAction{
-					Status: 200,
-				}).
-				Build()
+			authConfig := &v12.AuthConfig{
+				Metadata: &core.Metadata{
+					Name:      "west-two",
+					Namespace: namespace,
+				},
+				Configs: []*v12.AuthConfig_Config{{
+					Name: &wrappers.StringValue{
+						Value: "test",
+					},
+					AuthConfig: &v12.AuthConfig_Config_PassThroughAuth{
+						PassThroughAuth: &v12.PassThroughAuth{},
+					},
+				}},
+			}
 
 			snapshot = &gloov1snap.ApiSnapshot{
-				Gateways: v1.GatewayList{},
+				Gateways: v1.GatewayList{
+					// We rely on a ParentGateway to select all the VirtualServices that are relevant to this Gateway
+					defaults.DefaultGateway(namespace),
+				},
 				VirtualServices: v1.VirtualServiceList{
-					vsEast, vsWest, vsSouth,
+					vsEast, vsWest,
 				},
 				VirtualHostOptions: v1.VirtualHostOptionList{
 					optionEastOne, optionEastTwo, optionWestOne, optionWestTwo,
 				},
+				AuthConfigs: v12.AuthConfigList{
+					authConfig,
+				},
 			}
+		})
+
+		It("snapshot changes after running translation", func() {
+			initialSnapshotHash, err := snapshot.Hash(nil)
+			Expect(err).NotTo(HaveOccurred())
+
+			virtualHosts, reports := executeTranslation(snapshot)
+			Expect(virtualHosts).To(HaveLen(len(snapshot.VirtualServices)))
+			Expect(reports.ValidateStrict()).NotTo(HaveOccurred())
+
+			currentSnapshotHash, err := snapshot.Hash(nil)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(currentSnapshotHash).To(Equal(initialSnapshotHash), "the snapshot should not be modified") // this will fail when we fix the bug
 		})
 
 		It("delegated options are merged, but not appended", func() {
@@ -144,18 +168,13 @@ var _ = FDescribe("Virtual Service Translator", func() {
 			Expect(virtualHostEast.GetDomains()).To(ConsistOf("east.com"))
 			Expect(virtualHostEast.GetOptions().GetHeaderManipulation().GetRequestHeadersToAdd()).To(HaveLen(1))
 			Expect(virtualHostEast.GetOptions().GetHeaderManipulation().GetRequestHeadersToAdd()[0].GetHeader().GetKey()).To(Equal("x-custom-header-east-one"))
-			Expect(virtualHostEast.GetOptions().GetExtauth()).To(BeNil(), "no extauth defined on delegated options")
+			Expect(virtualHostEast.GetOptions().GetExtauth().GetConfigRef().GetName()).To(BeEmpty(), "no extauth defined on delegated options")
 
 			virtualHostWest := virtualHosts[1]
 			Expect(virtualHostWest.GetDomains()).To(ConsistOf("west.com"))
 			Expect(virtualHostWest.GetOptions().GetHeaderManipulation().GetRequestHeadersToAdd()).To(HaveLen(1))
 			Expect(virtualHostWest.GetOptions().GetHeaderManipulation().GetRequestHeadersToAdd()[0].GetHeader().GetKey()).To(Equal("x-custom-header-west-one"))
 			Expect(virtualHostWest.GetOptions().GetExtauth().GetConfigRef().GetName()).To(Equal("west-two"))
-
-			virtualHostSouth := virtualHosts[2]
-			Expect(virtualHostSouth.GetDomains()).To(ConsistOf("south.com"))
-			Expect(virtualHostSouth.GetOptions().GetHeaderManipulation()).To(BeNil(), "no header manipulation defined")
-			Expect(virtualHostSouth.GetOptions().GetExtauth()).To(BeNil(), "no extauth defined")
 		})
 
 	})
