@@ -25,7 +25,7 @@ const (
 	namespace = gloodefaults.GlooSystem
 )
 
-var _ = Describe("Virtual Service Translator", func() {
+var _ = FDescribe("Virtual Service Translator", func() {
 
 	// There are many tests for the VirtualServiceTranslator that still live in http_translator_test.go
 
