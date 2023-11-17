@@ -181,6 +181,7 @@ message Settings {
         string secret_access_key = 6;
         // The Session Token as provided by the security credentials on the AWS IAM resource
         string session_token = 7;
+        int32 watcher_increment = 8;
     }
 
     // Settings to configure TLS-enabled Vault as a secret store

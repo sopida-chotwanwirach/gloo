@@ -271,6 +271,7 @@ For more info see https://developer.hashicorp.com/vault/docs/auth/aws
 "accessKeyId": string
 "secretAccessKey": string
 "sessionToken": string
+"watcherIncrement": int
 
 ```
 
@@ -283,6 +284,7 @@ For more info see https://developer.hashicorp.com/vault/docs/auth/aws
 | `accessKeyId` | `string` | The Access Key ID as provided by the security credentials on the AWS IAM resource. Optional: In cases such as receiving temporary credentials through assumed roles with AWS Security Token Service (STS) or IAM Roles for Service Accounts (IRSA), this field can be omitted. https://developer.hashicorp.com/vault/docs/auth/aws#iam-authentication-inferences. |
 | `secretAccessKey` | `string` | The Secret Access Key as provided by the security credentials on the AWS IAM resource. Optional: In cases such as receiving temporary credentials through assumed roles with AWS Security Token Service (STS) or IAM Roles for Service Accounts (IRSA), this field can be omitted. https://developer.hashicorp.com/vault/docs/auth/aws#iam-authentication-inferences. |
 | `sessionToken` | `string` | The Session Token as provided by the security credentials on the AWS IAM resource. |
+| `watcherIncrement` | `int` |  |
 
 
 

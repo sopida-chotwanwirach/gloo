@@ -1147,6 +1147,10 @@ func (m *Settings_VaultAwsAuth) Equal(that interface{}) bool {
 		return false
 	}
 
+	if m.GetWatcherIncrement() != target.GetWatcherIncrement() {
+		return false
+	}
+
 	return true
 }
 

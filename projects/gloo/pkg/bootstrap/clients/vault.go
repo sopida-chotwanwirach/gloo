@@ -2,12 +2,16 @@ package clients
 
 import (
 	"context"
+	"fmt"
+	"log"
 	"os"
 
 	v1 "github.com/solo-io/gloo/projects/gloo/pkg/api/v1"
+	"github.com/solo-io/go-utils/contextutils"
 	"github.com/solo-io/solo-kit/pkg/api/v1/clients/factory"
 
 	"github.com/hashicorp/vault/api"
+	vault "github.com/hashicorp/vault/api"
 	_ "github.com/hashicorp/vault/api/auth/aws"
 	awsauth "github.com/hashicorp/vault/api/auth/aws"
 	errors "github.com/rotisserie/eris"
@@ -132,9 +136,11 @@ func configureVaultAuth(vaultSettings *v1.Settings_VaultSecrets, client *api.Cli
 	// each case returns
 	switch tlsCfg := vaultSettings.GetAuthMethod().(type) {
 	case *v1.Settings_VaultSecrets_AccessToken:
+		contextutils.LoggerFrom(context.Background()).Warnf("configuring vault client with access token - deprecated version")
 		client.SetToken(tlsCfg.AccessToken)
 		return client, nil
 	case *v1.Settings_VaultSecrets_Aws:
+		contextutils.LoggerFrom(context.Background()).Warnf("configuring vault client with configureAwsAuth")
 		return configureAwsAuth(tlsCfg.Aws, client)
 	default:
 		// We don't have one of the defined auth methods, so try to fall back to the
@@ -155,6 +161,7 @@ func configureAwsAuth(aws *v1.Settings_VaultAwsAuth, client *api.Client) (*api.C
 }
 
 func configureAwsIamAuth(aws *v1.Settings_VaultAwsAuth, client *api.Client) (*api.Client, error) {
+	contextutils.LoggerFrom(context.Background()).Warnf("configuring vault client with aws iam auth - updated version")
 	// The AccessKeyID and SecretAccessKey are not required in the case of using temporary credentials from assumed roles with AWS STS or IRSA.
 	// STS: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_use-resources.html
 	// IRSA: https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html
@@ -219,5 +226,72 @@ func configureAwsIamAuth(aws *v1.Settings_VaultAwsAuth, client *api.Client) (*ap
 		return nil, errors.New("no auth info was returned after login")
 	}
 
+	go renewToken(client, awsAuth, int(aws.GetWatcherIncrement()))
+
 	return client, nil
+}
+
+func renewToken(client *vault.Client, awsAuth *awsauth.AWSAuth, watcherIncrement int) {
+	contextutils.LoggerFrom(context.Background()).Warnf("Starting renewToken goroutine")
+	for {
+		vaultLoginResp, err := client.Auth().Login(context.Background(), awsAuth)
+		if err != nil {
+			log.Fatalf("unable to authenticate to Vault: %v", err)
+		}
+		tokenErr := manageTokenLifecycle(client, vaultLoginResp, watcherIncrement)
+		if tokenErr != nil {
+			log.Fatalf("unable to start managing token lifecycle: %v", tokenErr)
+		}
+	}
+}
+
+// Starts token lifecycle management. Returns only fatal errors as errors,
+// otherwise returns nil so we can attempt login again.
+func manageTokenLifecycle(client *vault.Client, token *vault.Secret, watcherIncrement int) error {
+	renew := token.Auth.Renewable // You may notice a different top-level field called Renewable. That one is used for dynamic secrets renewal, not token renewal.
+	if !renew {
+		log.Printf("Token is not configured to be renewable. Re-attempting login.")
+		return nil
+	}
+
+	lifetimeWatcherInput := &vault.LifetimeWatcherInput{
+		Secret: token,
+	}
+
+	if watcherIncrement > 0 {
+		log.Printf("Using a watcherIncrement of %d seconds.", watcherIncrement)
+		lifetimeWatcherInput.Increment = watcherIncrement
+	} else {
+		log.Printf("Omitting lifetimeWatcherInput Increment")
+	}
+
+	watcher, err := client.NewLifetimeWatcher(lifetimeWatcherInput)
+	if err != nil {
+		return fmt.Errorf("unable to initialize new lifetime watcher for renewing auth token: %w", err)
+	}
+
+	log.Printf("Created watcher: %+v.", watcher)
+	go watcher.Start()
+	defer watcher.Stop()
+
+	for {
+		select {
+		// `DoneCh` will return if renewal fails, or if the remaining lease
+		// duration is under a built-in threshold and either renewing is not
+		// extending it or renewing is disabled. In any case, the caller
+		// needs to attempt to log in again.
+		case err := <-watcher.DoneCh():
+			if err != nil {
+				log.Printf("Failed to renew token: %v. Re-attempting login.", err)
+				return nil
+			}
+			// This occurs once the token has reached max TTL.
+			log.Printf("Token can no longer be renewed. Re-attempting login.")
+			return nil
+
+		// Successfully completed renewal
+		case renewal := <-watcher.RenewCh():
+			log.Printf("Successfully renewed: %#v.", renewal)
+		}
+	}
 }

@@ -894,6 +894,9 @@ spec:
                                   type: string
                                 vaultRole:
                                   type: string
+                                watcherIncrement:
+                                  format: int32
+                                  type: integer
                               type: object
                             caCert:
                               type: string
@@ -980,6 +983,9 @@ spec:
                         type: string
                       vaultRole:
                         type: string
+                      watcherIncrement:
+                        format: int32
+                        type: integer
                     type: object
                   caCert:
                     type: string
