@@ -25,6 +25,7 @@ Name|Version|License
 [google/uuid](https://github.com/google/uuid)|v1.3.1|BSD 3-clause "New" or "Revised" License
 [gorilla/mux](https://github.com/gorilla/mux)|v1.8.0|BSD 3-clause "New" or "Revised" License
 [grpc-ecosystem/go-grpc-middleware](https://github.com/grpc-ecosystem/go-grpc-middleware)|v1.3.0|Apache License 2.0
+[auth/aws](https://github.com/hashicorp/vault)|v0.5.0|UNKNOWN
 [hinshun/vt10x](https://github.com/hinshun/vt10x)|v0.0.0-20180809195222-d55458df857c|MIT License
 [imdario/mergo](https://github.com/imdario/mergo)|v0.3.13|BSD 3-clause "New" or "Revised" License
 [inconshreveable/go-update](https://github.com/inconshreveable/go-update)|v0.0.0-20160112193335-8152e7eb6ccf|UNKNOWN
