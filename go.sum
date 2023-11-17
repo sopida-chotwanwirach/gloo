@@ -1347,6 +1347,8 @@ github.com/hashicorp/vault/api v1.10.0 h1:/US7sIjWN6Imp4o/Rj1Ce2Nr5bki/AXi9vAW3p
 github.com/hashicorp/vault/api v1.10.0/go.mod h1:jo5Y/ET+hNyz+JnKDt8XLAdKs+AM0G5W0Vp1IrFI8N8=
 github.com/hashicorp/vault/api/auth/aws v0.3.0 h1:CGUM1rB6JFiX9HhBrkbpdRiduiFF6+KfC3BVXrtqkWw=
 github.com/hashicorp/vault/api/auth/aws v0.3.0/go.mod h1:jkbyCqeuaEJd7Tz4JikjJt61hAAXPY9YuWZ/GaGIovs=
+github.com/hashicorp/vault/api/auth/aws v0.5.0 h1:IKf0W3A2tXEtw9KrooslBWw72Ld63V+fUHkkSmm+2T0=
+github.com/hashicorp/vault/api/auth/aws v0.5.0/go.mod h1:U2Y6Ci/kDsUkDTzUXq0OKG2/GQkEtqzQjTY1YYSQFnk=
 github.com/hashicorp/vault/sdk v0.6.0/go.mod h1:+DRpzoXIdMvKc88R4qxr+edwy/RvH5QK8itmxLiDHLc=
 github.com/hashicorp/yamux v0.0.0-20180604194846-3520598351bb/go.mod h1:+NfK9FKeTrX5uv1uIXGdwYDTeHna2qgaIlx54MXqjAM=
 github.com/hinshun/vt10x v0.0.0-20180616224451-1954e6464174/go.mod h1:DqJ97dSdRW1W22yXSB90986pcOyQ7r45iio1KN2ez1A=
@@ -1838,12 +1840,16 @@ github.com/solo-io/protoc-gen-ext v0.0.18 h1:zSAL8NzWpJUGYoA5IyjHiKASNyHjR0uxBQ7
 github.com/solo-io/protoc-gen-ext v0.0.18/go.mod h1:iGyCvmKmhJNXs5MgBcYFBF0om7LDnCVD2WwhOZGnqeA=
 github.com/solo-io/protoc-gen-openapi v0.1.0 h1:XBx0yAdjxoWxGQ+CiGcb29r+KAgyIkhdaB63uBvKzKY=
 github.com/solo-io/protoc-gen-openapi v0.1.0/go.mod h1:6d6gsEx74pW3UCA3G0al0GdMlYzGe/iCy2mPgGG9wI8=
+github.com/solo-io/protoc-gen-openapi v0.1.1 h1:40gsfvDvz+Sd6HFXBzdkeE5QEuAdZnoy55J5QFzMzl4=
+github.com/solo-io/protoc-gen-openapi v0.1.1/go.mod h1:6d6gsEx74pW3UCA3G0al0GdMlYzGe/iCy2mPgGG9wI8=
 github.com/solo-io/skv2 v0.32.0 h1:3I/KHo7iWdlbDUNeZk1qK3XB2YTRss4TFEVr5BpeCpY=
 github.com/solo-io/skv2 v0.32.0/go.mod h1:B3+k873oVsOpCQdCH0AgNLCLPabXoghUUSbeBeeqwa0=
 github.com/solo-io/solo-apis v0.0.0-20230801135538-4feef1fa0c08 h1:n/zVa9fF45gzCKCcqTbNzyi/5euotJQBkxpbNz7QLgY=
 github.com/solo-io/solo-apis v0.0.0-20230801135538-4feef1fa0c08/go.mod h1:yvPjg0+vCMTU5UW/HoUe43o0GogF9r/9ZhAQ4SYcDQ8=
 github.com/solo-io/solo-kit v0.33.0 h1:O4vjrFx4+I6jvzpMvF3AaoCVZHlyADru2uQLYN0XPBc=
 github.com/solo-io/solo-kit v0.33.0/go.mod h1:A07lC2OWBo01qxYr8qX71OQ0zEeLQwRKtAS953fQIqY=
+github.com/solo-io/solo-kit v0.33.2-0.20231117185759-048ffcfcfecc h1:nvL9yfxgRo7xRl5DfeUr5RvbTERE5kmm65B+Fn8/dM8=
+github.com/solo-io/solo-kit v0.33.2-0.20231117185759-048ffcfcfecc/go.mod h1:GZQNETatv+DN8c6z7Li0IvelXiNjQxzNz873EFNMSE4=
 github.com/spaolacci/murmur3 v0.0.0-20180118202830-f09979ecbc72/go.mod h1:JwIasOWyU6f++ZhiEuf87xNszmSA2myDM2Kzu9HwQUA=
 github.com/spf13/afero v1.1.2/go.mod h1:j4pytiNVoe2o6bmDsKpLACNPDBIoEAkihy7loJ1B0CQ=
 github.com/spf13/afero v1.2.2/go.mod h1:9ZxEEn6pIJ8Rxe320qSDBk6AsU0r9pR7Q4OcevTdifk=
@@ -2060,6 +2066,7 @@ golang.org/x/crypto v0.0.0-20220411220226-7b82a4e95df4/go.mod h1:IxCIyHEi3zRg3s0
 golang.org/x/crypto v0.1.0/go.mod h1:RecgLatLF4+eUMCP1PoPZQb+cVrJcOPbHkTkbkB9sbw=
 golang.org/x/crypto v0.3.0/go.mod h1:hebNnKkNXi2UzZN1eVRvBB7co0a+JxK6XbPiWVs/3J4=
 golang.org/x/crypto v0.5.0/go.mod h1:NK/OQwhpMQP3MwtdjgLlYHnH9ebylxKWv3e0fK+mkQU=
+golang.org/x/crypto v0.6.0/go.mod h1:OFC/31mSvZgRz0V1QTNCzfAI1aIRzbiufJtkMIlEp58=
 golang.org/x/crypto v0.12.0 h1:tFM/ta59kqch6LlvYnPa0yx5a83cL2nHflFhYKvv9Yk=
 golang.org/x/crypto v0.12.0/go.mod h1:NF0Gs7EO5K4qLn+Ylc+fih8BSTeIjAP05siRnAh98yw=
 golang.org/x/exp v0.0.0-20180321215751-8460e604b9de/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=

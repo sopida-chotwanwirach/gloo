@@ -34,7 +34,7 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/hashicorp/vault/api v1.10.0
-	github.com/hashicorp/vault/api/auth/aws v0.3.0
+	github.com/hashicorp/vault/api/auth/aws v0.5.0
 	github.com/hinshun/vt10x v0.0.0-20180809195222-d55458df857c
 	github.com/imdario/mergo v0.3.13
 	github.com/inconshreveable/go-update v0.0.0-20160112193335-8152e7eb6ccf
@@ -52,12 +52,12 @@ require (
 	github.com/solo-io/go-utils v0.24.6
 	github.com/solo-io/k8s-utils v0.5.1
 	github.com/solo-io/protoc-gen-ext v0.0.18
-	github.com/solo-io/protoc-gen-openapi v0.1.0
+	github.com/solo-io/protoc-gen-openapi v0.1.1
 	github.com/solo-io/skv2 v0.32.0
 
 	// Pinned to the latest `gloo-repo-branch` tag of solo-apis (`sa-k8s-1.27-bump`)
 	github.com/solo-io/solo-apis v0.0.0-20230801135538-4feef1fa0c08
-	github.com/solo-io/solo-kit v0.33.0
+	github.com/solo-io/solo-kit v0.33.2-0.20231117185759-048ffcfcfecc
 	github.com/spf13/afero v1.9.2
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5

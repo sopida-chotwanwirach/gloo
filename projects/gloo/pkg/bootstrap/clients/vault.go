@@ -10,32 +10,19 @@ import (
 	"github.com/solo-io/go-utils/contextutils"
 	"github.com/solo-io/solo-kit/pkg/api/v1/clients/factory"
 
-	"github.com/hashicorp/vault/api"
 	vault "github.com/hashicorp/vault/api"
-	_ "github.com/hashicorp/vault/api/auth/aws"
 	awsauth "github.com/hashicorp/vault/api/auth/aws"
 	errors "github.com/rotisserie/eris"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
-type vaultSecretClientSettings struct {
-	vault *api.Client
-
-	// Vault's path where resources are located.
-	root string
-
-	// Tells Vault which secrets engine it should route traffic to. Defaults to "secret".
-	// https://learn.hashicorp.com/tutorials/vault/getting-started-secrets-engines
-	pathPrefix string
-}
-
 // The DefaultPathPrefix may be overridden to allow for non-standard vault mount paths
 const DefaultPathPrefix = "secret"
 
-type VaultClientInitFunc func() *api.Client
+type VaultClientInitFunc func() *vault.Client
 
-func NoopVaultClientInitFunc(c *api.Client) VaultClientInitFunc {
-	return func() *api.Client {
+func NoopVaultClientInitFunc(c *vault.Client) VaultClientInitFunc {
+	return func() *vault.Client {
 		return c
 	}
 }
@@ -53,20 +40,20 @@ func NewVaultSecretClientFactory(clientInit VaultClientInitFunc, pathPrefix, roo
 	}
 }
 
-func VaultClientForSettings(vaultSettings *v1.Settings_VaultSecrets) (*api.Client, error) {
+func VaultClientForSettings(vaultSettings *v1.Settings_VaultSecrets) (*vault.Client, error) {
 	cfg, err := parseVaultSettings(vaultSettings)
 	if err != nil {
 		return nil, err
 	}
-	client, err := api.NewClient(cfg)
+	client, err := vault.NewClient(cfg)
 	if err != nil {
 		return nil, err
 	}
 	return configureVaultAuth(vaultSettings, client)
 }
 
-func parseVaultSettings(vaultSettings *v1.Settings_VaultSecrets) (*api.Config, error) {
-	cfg := api.DefaultConfig()
+func parseVaultSettings(vaultSettings *v1.Settings_VaultSecrets) (*vault.Config, error) {
+	cfg := vault.DefaultConfig()
 
 	if addr := vaultSettings.GetAddress(); addr != "" {
 		cfg.Address = addr
@@ -80,8 +67,8 @@ func parseVaultSettings(vaultSettings *v1.Settings_VaultSecrets) (*api.Config, e
 	return cfg, nil
 }
 
-func parseTlsSettings(vaultSettings *v1.Settings_VaultSecrets) *api.TLSConfig {
-	var tlsConfig *api.TLSConfig
+func parseTlsSettings(vaultSettings *v1.Settings_VaultSecrets) *vault.TLSConfig {
+	var tlsConfig *vault.TLSConfig
 
 	// helper functions to avoid repeated nilchecking
 	addStringSetting := func(s string, addSettingFunc func(string)) {
@@ -89,7 +76,7 @@ func parseTlsSettings(vaultSettings *v1.Settings_VaultSecrets) *api.TLSConfig {
 			return
 		}
 		if tlsConfig == nil {
-			tlsConfig = &api.TLSConfig{}
+			tlsConfig = &vault.TLSConfig{}
 		}
 		addSettingFunc(s)
 	}
@@ -98,7 +85,7 @@ func parseTlsSettings(vaultSettings *v1.Settings_VaultSecrets) *api.TLSConfig {
 			return
 		}
 		if tlsConfig == nil {
-			tlsConfig = &api.TLSConfig{}
+			tlsConfig = &vault.TLSConfig{}
 		}
 		addSettingFunc(b.GetValue())
 	}
@@ -132,7 +119,7 @@ func parseTlsSettings(vaultSettings *v1.Settings_VaultSecrets) *api.TLSConfig {
 
 }
 
-func configureVaultAuth(vaultSettings *v1.Settings_VaultSecrets, client *api.Client) (*api.Client, error) {
+func configureVaultAuth(vaultSettings *v1.Settings_VaultSecrets, client *vault.Client) (*vault.Client, error) {
 	// each case returns
 	switch tlsCfg := vaultSettings.GetAuthMethod().(type) {
 	case *v1.Settings_VaultSecrets_AccessToken:
@@ -156,11 +143,11 @@ func configureVaultAuth(vaultSettings *v1.Settings_VaultSecrets, client *api.Cli
 
 // This indirection function exists to more easily enable further extenstion of AWS auth
 // to support EC2 auth method in the future
-func configureAwsAuth(aws *v1.Settings_VaultAwsAuth, client *api.Client) (*api.Client, error) {
+func configureAwsAuth(aws *v1.Settings_VaultAwsAuth, client *vault.Client) (*vault.Client, error) {
 	return configureAwsIamAuth(aws, client)
 }
 
-func configureAwsIamAuth(aws *v1.Settings_VaultAwsAuth, client *api.Client) (*api.Client, error) {
+func configureAwsIamAuth(aws *v1.Settings_VaultAwsAuth, client *vault.Client) (*vault.Client, error) {
 	contextutils.LoggerFrom(context.Background()).Warnf("configuring vault client with aws iam auth - updated version")
 	// The AccessKeyID and SecretAccessKey are not required in the case of using temporary credentials from assumed roles with AWS STS or IRSA.
 	// STS: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_use-resources.html
