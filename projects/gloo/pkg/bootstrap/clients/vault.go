@@ -123,11 +123,9 @@ func configureVaultAuth(vaultSettings *v1.Settings_VaultSecrets, client *vault.C
 	// each case returns
 	switch tlsCfg := vaultSettings.GetAuthMethod().(type) {
 	case *v1.Settings_VaultSecrets_AccessToken:
-		contextutils.LoggerFrom(context.Background()).Warnf("configuring vault client with access token - deprecated version")
 		client.SetToken(tlsCfg.AccessToken)
 		return client, nil
 	case *v1.Settings_VaultSecrets_Aws:
-		contextutils.LoggerFrom(context.Background()).Warnf("configuring vault client with configureAwsAuth")
 		return configureAwsAuth(tlsCfg.Aws, client)
 	default:
 		// We don't have one of the defined auth methods, so try to fall back to the
@@ -148,7 +146,6 @@ func configureAwsAuth(aws *v1.Settings_VaultAwsAuth, client *vault.Client) (*vau
 }
 
 func configureAwsIamAuth(aws *v1.Settings_VaultAwsAuth, client *vault.Client) (*vault.Client, error) {
-	contextutils.LoggerFrom(context.Background()).Warnf("configuring vault client with aws iam auth - updated version")
 	// The AccessKeyID and SecretAccessKey are not required in the case of using temporary credentials from assumed roles with AWS STS or IRSA.
 	// STS: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_use-resources.html
 	// IRSA: https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html
@@ -219,15 +216,14 @@ func configureAwsIamAuth(aws *v1.Settings_VaultAwsAuth, client *vault.Client) (*
 }
 
 func renewToken(client *vault.Client, awsAuth *awsauth.AWSAuth, watcherIncrement int) {
-	contextutils.LoggerFrom(context.Background()).Warnf("Starting renewToken goroutine")
 	for {
 		vaultLoginResp, err := client.Auth().Login(context.Background(), awsAuth)
 		if err != nil {
-			log.Fatalf("unable to authenticate to Vault: %v", err)
+			contextutils.LoggerFrom(context.Background()).Fatalf("unable to authenticate to Vault: %v", err)
 		}
 		tokenErr := manageTokenLifecycle(client, vaultLoginResp, watcherIncrement)
 		if tokenErr != nil {
-			log.Fatalf("unable to start managing token lifecycle: %v", tokenErr)
+			contextutils.LoggerFrom(context.Background()).Fatalf("unable to start managing token lifecycle: %v", tokenErr)
 		}
 	}
 }
@@ -237,7 +233,7 @@ func renewToken(client *vault.Client, awsAuth *awsauth.AWSAuth, watcherIncrement
 func manageTokenLifecycle(client *vault.Client, token *vault.Secret, watcherIncrement int) error {
 	renew := token.Auth.Renewable // You may notice a different top-level field called Renewable. That one is used for dynamic secrets renewal, not token renewal.
 	if !renew {
-		log.Printf("Token is not configured to be renewable. Re-attempting login.")
+		contextutils.LoggerFrom(context.Background()).Infof("Token is not configured to be renewable. Re-attempting login.")
 		return nil
 	}
 
@@ -246,10 +242,7 @@ func manageTokenLifecycle(client *vault.Client, token *vault.Secret, watcherIncr
 	}
 
 	if watcherIncrement > 0 {
-		log.Printf("Using a watcherIncrement of %d seconds.", watcherIncrement)
 		lifetimeWatcherInput.Increment = watcherIncrement
-	} else {
-		log.Printf("Omitting lifetimeWatcherInput Increment")
 	}
 
 	watcher, err := client.NewLifetimeWatcher(lifetimeWatcherInput)
@@ -269,16 +262,16 @@ func manageTokenLifecycle(client *vault.Client, token *vault.Secret, watcherIncr
 		// needs to attempt to log in again.
 		case err := <-watcher.DoneCh():
 			if err != nil {
-				log.Printf("Failed to renew token: %v. Re-attempting login.", err)
+				contextutils.LoggerFrom(context.Background()).Infof("Failed to renew token: %v. Re-attempting login.", err)
 				return nil
 			}
 			// This occurs once the token has reached max TTL.
-			log.Printf("Token can no longer be renewed. Re-attempting login.")
+			contextutils.LoggerFrom(context.Background()).Infof("Token can no longer be renewed. Re-attempting login.")
 			return nil
 
 		// Successfully completed renewal
 		case renewal := <-watcher.RenewCh():
-			log.Printf("Successfully renewed: %#v.", renewal)
+			contextutils.LoggerFrom(context.Background()).Infof("Successfully renewed: %#v.", renewal)
 		}
 	}
 }
