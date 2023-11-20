@@ -181,6 +181,7 @@ message Settings {
         string secret_access_key = 6;
         // The Session Token as provided by the security credentials on the AWS IAM resource
         string session_token = 7;
+        // Value in seconds to pass the Vault LifetimeWatcher constructor as the Increment parameter. If undefined or 0, the argument will not be passed.
         int32 watcher_increment = 8;
     }
 

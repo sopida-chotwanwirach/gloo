@@ -1582,8 +1582,9 @@ type Settings_VaultAwsAuth struct {
 	// https://developer.hashicorp.com/vault/docs/auth/aws#iam-authentication-inferences
 	SecretAccessKey string `protobuf:"bytes,6,opt,name=secret_access_key,json=secretAccessKey,proto3" json:"secret_access_key,omitempty"`
 	// The Session Token as provided by the security credentials on the AWS IAM resource
-	SessionToken     string `protobuf:"bytes,7,opt,name=session_token,json=sessionToken,proto3" json:"session_token,omitempty"`
-	WatcherIncrement int32  `protobuf:"varint,8,opt,name=watcher_increment,json=watcherIncrement,proto3" json:"watcher_increment,omitempty"`
+	SessionToken string `protobuf:"bytes,7,opt,name=session_token,json=sessionToken,proto3" json:"session_token,omitempty"`
+	// Value in seconds to pass the Vault LifetimeWatcher constructor as the Increment parameter. If undefined or 0, the argument will not be passed.
+	WatcherIncrement int32 `protobuf:"varint,8,opt,name=watcher_increment,json=watcherIncrement,proto3" json:"watcher_increment,omitempty"`
 }
 
 func (x *Settings_VaultAwsAuth) Reset() {
