@@ -15,7 +15,7 @@ Start by creating the necessary permissions in AWS.
 
 ### Step 1: Create a cluster with OIDC
 
-To configure IRSA, create or use an EKS cluster with an associated OpenID Provider (OIDC). For setup instructions, follow [Creating an IAM OIDC provider for your cluster](https://docs.aws.amazon.com/eks/latest/userguide/enable-iam-roles-for-service-accounts.html) in the AWS docs.
+To configure IRSA, create or use an EKS cluster with an associated OpenID Provider (OIDC). For setup instructions, follow [Creating an IAM OIDC provider for your cluster](https://docs.aws.amazon.com/eks/latest/userguide/enable-iam-roles-for-service-accounts.html) in the AWS docs. Only the first page of the linked guide is neccessary.
 
 Next, export the following environment variables to use throughout your configuration.
 
@@ -121,6 +121,15 @@ After you set up your AWS resources, you can configure Vault with AWS authentica
 
 Install Vault by choosing one of the installation methods in Vault's [Installing Vault](https://developer.hashicorp.com/vault/docs/install) documentation.
 
+This is a basic approach that may work for you. Note that is uses dev mode and is intended for use with this guide only:
+
+```shell
+helm repo add hashicorp https://helm.releases.hashicorp.com
+helm repo update
+
+helm install vault hashicorp/vault --set "server.dev.enabled=true" --namespace vault --create-namespace
+```
+
 ### Step 2: Enable AWS authentication on Vault
 
 ```shell
@@ -182,6 +191,9 @@ vault write auth/aws/role/dev-role-iam \
     max_ttl=24h
 ```
 
+If this fails see [Access denied due to identity-based policies – implicit denial](#access-denied-due-to-identity-based-policies--implicit-denial)
+
+
 ## Gloo Edge
 
 Lastly, install Gloo Edge by using a configuration that allows Vault and IRSA credential fetching.
@@ -226,7 +238,7 @@ If you use Gloo Edge Enterprise, nest these Helm settings within the `gloo` sect
 ### Step 2: Install Gloo using Helm
 
 ```shell
-export EDGE_VERSION=v1.15.2
+export EDGE_VERSION=v1.15.3
 
 helm repo add gloo https://storage.googleapis.com/solo-public-helm
 helm repo update
