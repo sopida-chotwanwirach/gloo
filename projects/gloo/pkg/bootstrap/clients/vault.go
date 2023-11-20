@@ -3,7 +3,6 @@ package clients
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 
 	v1 "github.com/solo-io/gloo/projects/gloo/pkg/api/v1"
@@ -215,6 +214,8 @@ func configureAwsIamAuth(aws *v1.Settings_VaultAwsAuth, client *vault.Client) (*
 	return client, nil
 }
 
+// Once you've set the token for your Vault client, you will need to periodically renew its lease.
+// taken from https://github.com/hashicorp/vault-examples/blob/main/examples/token-renewal/go/example.go
 func renewToken(client *vault.Client, awsAuth *awsauth.AWSAuth, watcherIncrement int) {
 	for {
 		vaultLoginResp, err := client.Auth().Login(context.Background(), awsAuth)
@@ -230,6 +231,7 @@ func renewToken(client *vault.Client, awsAuth *awsauth.AWSAuth, watcherIncrement
 
 // Starts token lifecycle management. Returns only fatal errors as errors,
 // otherwise returns nil so we can attempt login again.
+// taken from https://github.com/hashicorp/vault-examples/blob/main/examples/token-renewal/go/example.go
 func manageTokenLifecycle(client *vault.Client, token *vault.Secret, watcherIncrement int) error {
 	renew := token.Auth.Renewable // You may notice a different top-level field called Renewable. That one is used for dynamic secrets renewal, not token renewal.
 	if !renew {
@@ -250,7 +252,6 @@ func manageTokenLifecycle(client *vault.Client, token *vault.Secret, watcherIncr
 		return fmt.Errorf("unable to initialize new lifetime watcher for renewing auth token: %w", err)
 	}
 
-	log.Printf("Created watcher: %+v.", watcher)
 	go watcher.Start()
 	defer watcher.Stop()
 
