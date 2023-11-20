@@ -115,7 +115,7 @@ aws iam attach-role-policy --role-name $VAULT_AUTH_ROLE_NAME --policy-arn=${VAUL
 
 ## Vault
 
-After you set up your AWS resources, you can configure Vault with AWS authentication.
+After you set up your AWS resources, you can configure Vault with AWS authentication. This guide has only been verfied with Vault installed in the same EKS cluster we created in the [AWS section](#aws).
 
 ### Step 1: Set up Vault
 
@@ -196,7 +196,7 @@ If this fails see [Access denied due to identity-based policies – implicit den
 
 ## Gloo Edge
 
-Lastly, install Gloo Edge by using a configuration that allows Vault and IRSA credential fetching.
+Lastly, install Gloo Edge by using a configuration that allows Vault and IRSA credential fetching. This guide has only been verfied with Vault installed in the same EKS cluster we created in the [AWS section](#aws).
 
 ### Step 1: Prepare Helm overrides
 
