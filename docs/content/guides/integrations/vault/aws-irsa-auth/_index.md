@@ -209,25 +209,26 @@ cat <<EOF > helm-overrides.yaml
 settings:
 	secretOptions:
 		sources:
-		- vault:
-			# set to address for the Vault instance
-			address: http://vault-internal.vault:8200
-			aws:
-				iamServerIdHeader: ${IAM_SERVER_ID_HEADER_VALUE}
-				mountPath: aws
-				region: ${AWS_REGION}
-			# assumes kv store is mounted on 'dev'
-			pathPrefix: dev
-			# root key by default is 'gloo'.
-			rootKey: gloo
+  kubeResourceOverride:
+    spec:
+      secretOptions:
+        sources:
+          - vault:
+              address: http://vault-internal.vault:8200
+              aws:
+                iamServerIdHeader: ${IAM_SERVER_ID_HEADER_VALUE}
+                mountPath: aws
+                region:  ${AWS_REGION}
+              pathPrefix: dev
+          - kubernetes: {}
 gloo:
-	serviceAccount:
-		extraAnnotations: 
-			eks.amazonaws.com/role-arn: ${VAULT_AUTH_ROLE_ARN}
+  serviceAccount:
+    extraAnnotations: 
+      eks.amazonaws.com/role-arn: ${VAULT_AUTH_ROLE_ARN}
 discovery:
-	serviceAccount:
-		extraAnnotations:
-			eks.amazonaws.com/role-arn: ${VAULT_AUTH_ROLE_ARN}
+  serviceAccount:
+    extraAnnotations:
+      eks.amazonaws.com/role-arn: ${VAULT_AUTH_ROLE_ARN}
 EOF
 ```
 
