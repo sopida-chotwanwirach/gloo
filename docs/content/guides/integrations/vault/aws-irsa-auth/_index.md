@@ -207,8 +207,6 @@ Note that you must adjust both the `pathPrefix` and `rootKey` options when you u
 ```shell
 cat <<EOF > helm-overrides.yaml
 settings:
-	secretOptions:
-		sources:
   kubeResourceOverride:
     spec:
       secretOptions:
