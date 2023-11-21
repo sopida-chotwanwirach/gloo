@@ -39,7 +39,7 @@ func NewVaultSecretClientFactory(clientInit VaultClientInitFunc, pathPrefix, roo
 	}
 }
 
-func VaultClientForSettings(vaultSettings *v1.Settings_VaultSecrets) (*vault.Client, error) {
+func VaultClientForSettings(ctx context.Context, vaultSettings *v1.Settings_VaultSecrets) (*vault.Client, error) {
 	cfg, err := parseVaultSettings(vaultSettings)
 	if err != nil {
 		return nil, err
@@ -48,7 +48,7 @@ func VaultClientForSettings(vaultSettings *v1.Settings_VaultSecrets) (*vault.Cli
 	if err != nil {
 		return nil, err
 	}
-	return configureVaultAuth(vaultSettings, client)
+	return configureVaultAuth(ctx, vaultSettings, client)
 }
 
 func parseVaultSettings(vaultSettings *v1.Settings_VaultSecrets) (*vault.Config, error) {
@@ -118,14 +118,14 @@ func parseTlsSettings(vaultSettings *v1.Settings_VaultSecrets) *vault.TLSConfig 
 
 }
 
-func configureVaultAuth(vaultSettings *v1.Settings_VaultSecrets, client *vault.Client) (*vault.Client, error) {
+func configureVaultAuth(ctx context.Context, vaultSettings *v1.Settings_VaultSecrets, client *vault.Client) (*vault.Client, error) {
 	// each case returns
 	switch tlsCfg := vaultSettings.GetAuthMethod().(type) {
 	case *v1.Settings_VaultSecrets_AccessToken:
 		client.SetToken(tlsCfg.AccessToken)
 		return client, nil
 	case *v1.Settings_VaultSecrets_Aws:
-		return configureAwsAuth(tlsCfg.Aws, client)
+		return configureAwsAuth(ctx, tlsCfg.Aws, client)
 	default:
 		// We don't have one of the defined auth methods, so try to fall back to the
 		// deprecated token field before erroring
@@ -140,11 +140,11 @@ func configureVaultAuth(vaultSettings *v1.Settings_VaultSecrets, client *vault.C
 
 // This indirection function exists to more easily enable further extenstion of AWS auth
 // to support EC2 auth method in the future
-func configureAwsAuth(aws *v1.Settings_VaultAwsAuth, client *vault.Client) (*vault.Client, error) {
-	return configureAwsIamAuth(aws, client)
+func configureAwsAuth(ctx context.Context, aws *v1.Settings_VaultAwsAuth, client *vault.Client) (*vault.Client, error) {
+	return configureAwsIamAuth(ctx, aws, client)
 }
 
-func configureAwsIamAuth(aws *v1.Settings_VaultAwsAuth, client *vault.Client) (*vault.Client, error) {
+func configureAwsIamAuth(ctx context.Context, aws *v1.Settings_VaultAwsAuth, client *vault.Client) (*vault.Client, error) {
 	// The AccessKeyID and SecretAccessKey are not required in the case of using temporary credentials from assumed roles with AWS STS or IRSA.
 	// STS: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_use-resources.html
 	// IRSA: https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html
@@ -194,7 +194,7 @@ func configureAwsIamAuth(aws *v1.Settings_VaultAwsAuth, client *vault.Client) (*
 		return nil, err
 	}
 
-	authInfo, err := client.Auth().Login(context.Background(), awsAuth)
+	authInfo, err := client.Auth().Login(ctx, awsAuth)
 	if err != nil {
 		err := errors.Wrapf(err, "unable to login to AWS auth method")
 		// if using inferred credentials, add error information regarding setting credentials
@@ -209,22 +209,22 @@ func configureAwsIamAuth(aws *v1.Settings_VaultAwsAuth, client *vault.Client) (*
 	}
 
 	// set up auth token refreshing with client.NewLifetimeWatcher()
-	go renewToken(client, awsAuth, int(aws.GetWatcherIncrement()))
+	go renewToken(ctx, client, awsAuth, int(aws.GetWatcherIncrement()))
 
 	return client, nil
 }
 
 // Once you've set the token for your Vault client, you will need to periodically renew its lease.
 // taken from https://github.com/hashicorp/vault-examples/blob/main/examples/token-renewal/go/example.go
-func renewToken(client *vault.Client, awsAuth *awsauth.AWSAuth, watcherIncrement int) {
+func renewToken(ctx context.Context, client *vault.Client, awsAuth *awsauth.AWSAuth, watcherIncrement int) {
 	for {
-		vaultLoginResp, err := client.Auth().Login(context.Background(), awsAuth)
+		vaultLoginResp, err := client.Auth().Login(ctx, awsAuth)
 		if err != nil {
-			contextutils.LoggerFrom(context.Background()).Fatalf("unable to authenticate to Vault: %v", err)
+			contextutils.LoggerFrom(ctx).Fatalf("unable to authenticate to Vault: %v", err)
 		}
-		tokenErr := manageTokenLifecycle(client, vaultLoginResp, watcherIncrement)
+		tokenErr := manageTokenLifecycle(ctx, client, vaultLoginResp, watcherIncrement)
 		if tokenErr != nil {
-			contextutils.LoggerFrom(context.Background()).Fatalf("unable to start managing token lifecycle: %v", tokenErr)
+			contextutils.LoggerFrom(ctx).Fatalf("unable to start managing token lifecycle: %v", tokenErr)
 		}
 	}
 }
@@ -232,10 +232,10 @@ func renewToken(client *vault.Client, awsAuth *awsauth.AWSAuth, watcherIncrement
 // Starts token lifecycle management. Returns only fatal errors as errors,
 // otherwise returns nil so we can attempt login again.
 // taken from https://github.com/hashicorp/vault-examples/blob/main/examples/token-renewal/go/example.go
-func manageTokenLifecycle(client *vault.Client, token *vault.Secret, watcherIncrement int) error {
+func manageTokenLifecycle(ctx context.Context, client *vault.Client, token *vault.Secret, watcherIncrement int) error {
 	renew := token.Auth.Renewable // You may notice a different top-level field called Renewable. That one is used for dynamic secrets renewal, not token renewal.
 	if !renew {
-		contextutils.LoggerFrom(context.Background()).Infof("Token is not configured to be renewable. Re-attempting login.")
+		contextutils.LoggerFrom(ctx).Debugf("Token is not configured to be renewable. Re-attempting login.")
 		return nil
 	}
 
@@ -263,16 +263,16 @@ func manageTokenLifecycle(client *vault.Client, token *vault.Secret, watcherIncr
 		// needs to attempt to log in again.
 		case err := <-watcher.DoneCh():
 			if err != nil {
-				contextutils.LoggerFrom(context.Background()).Infof("Failed to renew token: %v. Re-attempting login.", err)
+				contextutils.LoggerFrom(ctx).Debugf("Failed to renew token: %v. Re-attempting login.", err)
 				return nil
 			}
 			// This occurs once the token has reached max TTL.
-			contextutils.LoggerFrom(context.Background()).Infof("Token can no longer be renewed. Re-attempting login.")
+			contextutils.LoggerFrom(ctx).Debugf("Token can no longer be renewed. Re-attempting login.")
 			return nil
 
 		// Successfully completed renewal
 		case renewal := <-watcher.RenewCh():
-			contextutils.LoggerFrom(context.Background()).Infof("Successfully renewed: %#v.", renewal)
+			contextutils.LoggerFrom(ctx).Debugf("Successfully renewed: %#v.", renewal)
 		}
 	}
 }

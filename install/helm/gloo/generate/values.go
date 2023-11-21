@@ -260,7 +260,7 @@ type VaultAwsAuth struct {
 	AccessKeyID       string  `json:"accessKeyID,omitempty" desc:"Optional. The Access Key ID as provided by the security credentials on the AWS IAM resource. In cases such as receiving temporary credentials through assumed roles with AWS Security Token Service (STS) or IAM Roles for Service Accounts (IRSA), this field can be omitted. https://developer.hashicorp.com/vault/docs/auth/aws#iam-authentication-inferences."`
 	SecretAccessKey   string  `json:"secretAccessKey,omitempty" desc:"Optional. The Secret Access Key as provided by the security credentials on the AWS IAM resource. In cases such as receiving temporary credentials through assumed roles with AWS Security Token Service (STS) or IAM Roles for Service Accounts (IRSA), this field can be omitted. https://developer.hashicorp.com/vault/docs/auth/aws#iam-authentication-inferences."`
 	SessionToken      string  `json:"sessionToken,omitempty" desc:"The Session Token as provided by the security credentials on the AWS IAM resource."`
-	WatcherIncrement  *uint32 `json:"watcherIncrement,omitempty" desc:"The number of seconds passed as the WatcherInterval argument to the vault LifetimeWatcher. Argument is not passed of value is 0, See https://github.com/hashicorp/vault-examples/blob/main/examples/token-renewal/go/example.go. Defaults to 0."`
+	WatcherIncrement  *uint32 `json:"watcherIncrement,omitempty" desc:"The number of seconds passed as the WatcherIncrement argument to the vault LifetimeWatcher. Argument is not passed if value is 0, See https://github.com/hashicorp/vault-examples/blob/main/examples/token-renewal/go/example.go. Defaults to 0."`
 }
 
 type Directory struct {

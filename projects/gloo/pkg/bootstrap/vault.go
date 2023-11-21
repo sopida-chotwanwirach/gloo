@@ -1,6 +1,8 @@
 package bootstrap
 
 import (
+	"context"
+
 	v1 "github.com/solo-io/gloo/projects/gloo/pkg/api/v1"
 	"github.com/solo-io/gloo/projects/gloo/pkg/bootstrap/clients"
 	"github.com/solo-io/solo-kit/pkg/api/v1/clients/factory"
@@ -20,5 +22,5 @@ func NewVaultSecretClientFactory(client *api.Client, pathPrefix, rootKey string)
 
 // Deprecated. Use bootstrap/clients
 func VaultClientForSettings(vaultSettings *v1.Settings_VaultSecrets) (*api.Client, error) {
-	return clients.VaultClientForSettings(vaultSettings)
+	return clients.VaultClientForSettings(context.Background(), vaultSettings)
 }
