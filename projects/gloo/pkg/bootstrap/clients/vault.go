@@ -194,7 +194,6 @@ func configureAwsIamAuth(aws *v1.Settings_VaultAwsAuth, client *vault.Client) (*
 		return nil, err
 	}
 
-	// TODO(jbohanon) set up auth token refreshing with client.NewLifetimeWatcher()
 	authInfo, err := client.Auth().Login(context.Background(), awsAuth)
 	if err != nil {
 		err := errors.Wrapf(err, "unable to login to AWS auth method")
@@ -209,6 +208,7 @@ func configureAwsIamAuth(aws *v1.Settings_VaultAwsAuth, client *vault.Client) (*
 		return nil, errors.New("no auth info was returned after login")
 	}
 
+	// set up auth token refreshing with client.NewLifetimeWatcher()
 	go renewToken(client, awsAuth, int(aws.GetWatcherIncrement()))
 
 	return client, nil

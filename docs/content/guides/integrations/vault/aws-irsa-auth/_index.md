@@ -202,9 +202,10 @@ Lastly, install Gloo Edge by using a configuration that allows Vault and IRSA cr
 
 Override the default settings to use Vault as a source for managing secrets. To allow for IRSA, add the `eks.amazonaws.com/role-arn` annotations, which reference the roles to assume, to the `gloo` and `discovery` service accounts.
 
-Note that you must adjust both the `pathPrefix` and `rootKey` options when you use a custom `kv` secrets engine.
+Note that you must adjust the `pathPrefix` options when you use a custom `kv` secrets engine. The value of `root_key` is `gloo` by default and is the correct value for this example. Update `VAULT_ADDRESS` if appropriate.
 
 ```shell
+export VAULT_ADDRESS=http://vault-internal.vault:8200
 cat <<EOF > helm-overrides.yaml
 settings:
   kubeResourceOverride:
@@ -212,11 +213,13 @@ settings:
       secretOptions:
         sources:
           - vault:
-              address: http://vault-internal.vault:8200
+              # set to address for the Vault instance
+              address: ${VAULT_ADDRESS}
               aws:
                 iamServerIdHeader: ${IAM_SERVER_ID_HEADER_VALUE}
                 mountPath: aws
                 region:  ${AWS_REGION}
+              # assumes kv store is mounted on 'dev'
               pathPrefix: dev
           - kubernetes: {}
 gloo:
