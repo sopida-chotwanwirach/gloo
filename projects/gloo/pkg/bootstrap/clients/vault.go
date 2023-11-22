@@ -209,20 +209,20 @@ func configureAwsIamAuth(ctx context.Context, aws *v1.Settings_VaultAwsAuth, cli
 	}
 
 	// set up auth token refreshing with client.NewLifetimeWatcher()
-	go renewToken(ctx, client, awsAuth, int(aws.GetWatcherIncrement()))
+	go renewToken(ctx, client, awsAuth, int(aws.GetLeaseIncrement()))
 
 	return client, nil
 }
 
 // Once you've set the token for your Vault client, you will need to periodically renew its lease.
 // taken from https://github.com/hashicorp/vault-examples/blob/main/examples/token-renewal/go/example.go
-func renewToken(ctx context.Context, client *vault.Client, awsAuth *awsauth.AWSAuth, watcherIncrement int) {
+func renewToken(ctx context.Context, client *vault.Client, awsAuth *awsauth.AWSAuth, leaseIncrement int) {
 	for {
 		vaultLoginResp, err := client.Auth().Login(ctx, awsAuth)
 		if err != nil {
 			contextutils.LoggerFrom(ctx).Fatalf("unable to authenticate to Vault: %v", err)
 		}
-		tokenErr := manageTokenLifecycle(ctx, client, vaultLoginResp, watcherIncrement)
+		tokenErr := manageTokenLifecycle(ctx, client, vaultLoginResp, leaseIncrement)
 		if tokenErr != nil {
 			contextutils.LoggerFrom(ctx).Fatalf("unable to start managing token lifecycle: %v", tokenErr)
 		}
@@ -231,22 +231,17 @@ func renewToken(ctx context.Context, client *vault.Client, awsAuth *awsauth.AWSA
 
 // Starts token lifecycle management. Returns only fatal errors as errors,
 // otherwise returns nil so we can attempt login again.
-// taken from https://github.com/hashicorp/vault-examples/blob/main/examples/token-renewal/go/example.go
-func manageTokenLifecycle(ctx context.Context, client *vault.Client, token *vault.Secret, watcherIncrement int) error {
+// based on https://github.com/hashicorp/vault-examples/blob/main/examples/token-renewal/go/example.go
+func manageTokenLifecycle(ctx context.Context, client *vault.Client, token *vault.Secret, leaseIncrement int) error {
 	if !token.Auth.Renewable {
 		contextutils.LoggerFrom(ctx).Debugf("Token is not configured to be renewable. Re-attempting login.")
 		return nil
 	}
 
-	lifetimeWatcherInput := &vault.LifetimeWatcherInput{
-		Secret: token,
-	}
-
-	if watcherIncrement > 0 {
-		lifetimeWatcherInput.Increment = watcherIncrement
-	}
-
-	watcher, err := client.NewLifetimeWatcher(lifetimeWatcherInput)
+	watcher, err := client.NewLifetimeWatcher(&vault.LifetimeWatcherInput{
+		Secret:    token,
+		Increment: leaseIncrement,
+	})
 	if err != nil {
 		return fmt.Errorf("unable to initialize new lifetime watcher for renewing auth token: %w", err)
 	}

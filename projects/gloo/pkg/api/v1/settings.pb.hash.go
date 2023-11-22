@@ -1592,7 +1592,7 @@ func (m *Settings_VaultAwsAuth) Hash(hasher hash.Hash64) (uint64, error) {
 		return 0, err
 	}
 
-	err = binary.Write(hasher, binary.LittleEndian, m.GetWatcherIncrement())
+	err = binary.Write(hasher, binary.LittleEndian, m.GetLeaseIncrement())
 	if err != nil {
 		return 0, err
 	}
