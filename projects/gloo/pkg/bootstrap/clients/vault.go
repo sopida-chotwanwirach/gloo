@@ -216,13 +216,13 @@ func configureAwsIamAuth(ctx context.Context, aws *v1.Settings_VaultAwsAuth, cli
 
 // Once you've set the token for your Vault client, you will need to periodically renew its lease.
 // taken from https://github.com/hashicorp/vault-examples/blob/main/examples/token-renewal/go/example.go
-func renewToken(ctx context.Context, client *vault.Client, awsAuth *awsauth.AWSAuth, leaseIncrement int) {
+func renewToken(ctx context.Context, client *vault.Client, awsAuth *awsauth.AWSAuth, watcherIncrement int) {
 	for {
 		vaultLoginResp, err := client.Auth().Login(ctx, awsAuth)
 		if err != nil {
 			contextutils.LoggerFrom(ctx).Fatalf("unable to authenticate to Vault: %v", err)
 		}
-		tokenErr := manageTokenLifecycle(ctx, client, vaultLoginResp, leaseIncrement)
+		tokenErr := manageTokenLifecycle(ctx, client, vaultLoginResp, watcherIncrement)
 		if tokenErr != nil {
 			contextutils.LoggerFrom(ctx).Fatalf("unable to start managing token lifecycle: %v", tokenErr)
 		}
@@ -232,7 +232,7 @@ func renewToken(ctx context.Context, client *vault.Client, awsAuth *awsauth.AWSA
 // Starts token lifecycle management. Returns only fatal errors as errors,
 // otherwise returns nil so we can attempt login again.
 // based on https://github.com/hashicorp/vault-examples/blob/main/examples/token-renewal/go/example.go
-func manageTokenLifecycle(ctx context.Context, client *vault.Client, token *vault.Secret, leaseIncrement int) error {
+func manageTokenLifecycle(ctx context.Context, client *vault.Client, token *vault.Secret, watcherIncrement int) error {
 	if !token.Auth.Renewable {
 		contextutils.LoggerFrom(ctx).Debugf("Token is not configured to be renewable. Re-attempting login.")
 		return nil
@@ -240,7 +240,7 @@ func manageTokenLifecycle(ctx context.Context, client *vault.Client, token *vaul
 
 	watcher, err := client.NewLifetimeWatcher(&vault.LifetimeWatcherInput{
 		Secret:    token,
-		Increment: leaseIncrement,
+		Increment: watcherIncrement,
 	})
 	if err != nil {
 		return fmt.Errorf("unable to initialize new lifetime watcher for renewing auth token: %w", err)

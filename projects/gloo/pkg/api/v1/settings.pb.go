@@ -1583,7 +1583,7 @@ type Settings_VaultAwsAuth struct {
 	SecretAccessKey string `protobuf:"bytes,6,opt,name=secret_access_key,json=secretAccessKey,proto3" json:"secret_access_key,omitempty"`
 	// The Session Token as provided by the security credentials on the AWS IAM resource
 	SessionToken string `protobuf:"bytes,7,opt,name=session_token,json=sessionToken,proto3" json:"session_token,omitempty"`
-	// The time increment, in seconds, used in renewing the lease of the Vault token. Defaults to 0, which causes the default TTL to be used.
+	// The time increment, in seconds, used in renewing the lease of the Vault token. See: https://developer.hashicorp.com/vault/docs/concepts/lease#lease-durations-and-renewal. Defaults to 0, which causes the default TTL to be used.
 	LeaseIncrement int32 `protobuf:"varint,8,opt,name=lease_increment,json=leaseIncrement,proto3" json:"lease_increment,omitempty"`
 }
 
