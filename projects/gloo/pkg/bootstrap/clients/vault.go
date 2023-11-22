@@ -233,8 +233,7 @@ func renewToken(ctx context.Context, client *vault.Client, awsAuth *awsauth.AWSA
 // otherwise returns nil so we can attempt login again.
 // taken from https://github.com/hashicorp/vault-examples/blob/main/examples/token-renewal/go/example.go
 func manageTokenLifecycle(ctx context.Context, client *vault.Client, token *vault.Secret, watcherIncrement int) error {
-	renew := token.Auth.Renewable // You may notice a different top-level field called Renewable. That one is used for dynamic secrets renewal, not token renewal.
-	if !renew {
+	if !token.Auth.Renewable {
 		contextutils.LoggerFrom(ctx).Debugf("Token is not configured to be renewable. Re-attempting login.")
 		return nil
 	}
