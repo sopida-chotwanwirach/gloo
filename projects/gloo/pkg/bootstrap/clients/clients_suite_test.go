@@ -3,6 +3,7 @@ package clients_test
 import (
 	"testing"
 
+	"github.com/solo-io/gloo/test/helpers"
 	"github.com/solo-io/gloo/test/services"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -10,6 +11,10 @@ import (
 )
 
 func TestBootstrapClients(t *testing.T) {
+	// This has caused issues when tests are run in parallel (not enabled in CI)
+	leakDetector := helpers.DeferredGoroutineLeakDetector(t)
+	defer leakDetector()
+
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Bootstrap Clients Suite")
 }
