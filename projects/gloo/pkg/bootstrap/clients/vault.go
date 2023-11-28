@@ -227,42 +227,49 @@ var (
 func renewToken(ctx context.Context, client *vault.Client, awsAuth *awsauth.AWSAuth, watcherIncrement int) {
 	contextutils.LoggerFrom(ctx).Infof("Starting renewToken goroutine")
 
+	// var count = 0
 	for {
 		var vaultLoginResp *vault.Secret
-		//err := contextutils.NewExponentialBackoff(contextutils.ExponentialBackoff{}).Backoff(ctx, func(ctx context.Context) error {
-		vaultLoginResp, err := client.Auth().Login(ctx, awsAuth)
-		if err != nil {
-			contextutils.LoggerFrom(ctx).Fatalf("unable to authenticate to Vault: %v", err)
-			//contextutils.LoggerFrom(ctx).Errorf("unable to authenticate to Vault: %v", err)
-			//return errVaultAuthentication
-		}
-		if vaultLoginResp == nil {
-			contextutils.LoggerFrom(ctx).Fatalf("no auth info was returned after login")
-			//contextutils.LoggerFrom(ctx).Errorf("no auth info was returned after login")
-			//return errNoAuthInfo
-		}
+		err := contextutils.NewExponentialBackoff(contextutils.ExponentialBackoff{}).Backoff(ctx, func(ctx context.Context) error {
+			var vaultErr error
+			vaultLoginResp, vaultErr = client.Auth().Login(ctx, awsAuth)
+			if vaultErr != nil {
+				//contextutils.LoggerFrom(ctx).Fatalf("unable to authenticate to Vault: %v", vaultErr)
+				contextutils.LoggerFrom(ctx).Errorf("unable to authenticate to Vault: %v", vaultErr)
+				return errVaultAuthentication
+			}
+			if vaultLoginResp == nil {
+				//contextutils.LoggerFrom(ctx).Fatalf("no auth info was returned after login")
+				contextutils.LoggerFrom(ctx).Errorf("no auth info was returned after login")
+				return errNoAuthInfo
+			}
+			// if count < 3 {
+			// 	count++
+			// 	contextutils.LoggerFrom(ctx).Errorf("ERROR: Testing retry %d", count)
+			// 	return errors.Errorf("ERROR: Testing retry %d", count)
+			// }
 
-		//	return nil
-		//})
-		// if err != nil {
-		// 	if ctx.Err() != nil {
-		// 		contextutils.LoggerFrom(ctx).Fatalf("renew token context error: %v", ctx.Err())
-		// 	} else {
-		// 		contextutils.LoggerFrom(ctx).Fatalf("unable to authenticate to Vault: %v", err)
-		// 	}
-		// } else {
-		// 	contextutils.LoggerFrom(ctx).Infof("Successfully authenticated to Vault")
-		// }
-		contextutils.LoggerFrom(ctx).Infof("Successfully authenticated to Vault")
+			return nil
+		})
+		// We should never hit these errors because the retry logic has no max time or retries, so it will retry until err is nil
+		if err != nil {
+			if ctx.Err() != nil {
+				contextutils.LoggerFrom(ctx).Fatalf("renew token context error: %v", ctx.Err())
+			} else {
+				contextutils.LoggerFrom(ctx).Fatalf("unable to authenticate to Vault: %v", err)
+			}
+		}
+		contextutils.LoggerFrom(ctx).Infof("Successfully authenticated to Vault %v", vaultLoginResp)
+
 		retry, tokenErr := manageTokenLifecycle(ctx, client, vaultLoginResp, watcherIncrement)
 
-		contextutils.LoggerFrom(ctx).Debugf("manageTokenLifecycle returned retry=%v, tokenErr=%v", retry, tokenErr)
+		// The only error this function can return is if the vaultLoginResp is nil, and we have checked against that
 		if tokenErr != nil {
 			contextutils.LoggerFrom(ctx).Fatalf("unable to start managing token lifecycle: %v", tokenErr)
 		}
 
 		if !retry {
-			contextutils.LoggerFrom(ctx).Infof("Stopping renewToken goroutine")
+			// contextutils.LoggerFrom(ctx).Infof("Stopping renewToken goroutine")
 			return
 		}
 
@@ -274,7 +281,6 @@ func renewToken(ctx context.Context, client *vault.Client, awsAuth *awsauth.AWSA
 // otherwise returns nil so we can attempt login again.
 // based on https://github.com/hashicorp/vault-examples/blob/main/examples/token-renewal/go/example.go
 func manageTokenLifecycle(ctx context.Context, client *vault.Client, secret *vault.Secret, watcherIncrement int) (bool, error) {
-	contextutils.LoggerFrom(ctx).Infof("Starting manageTokenLifecycle goroutine")
 	if renewable, err := secret.TokenIsRenewable(); !renewable || err != nil {
 		if err != nil {
 			contextutils.LoggerFrom(ctx).Debugf("Error in checking if token is renewable: %v. Re-attempting login.", err)
@@ -292,6 +298,9 @@ func manageTokenLifecycle(ctx context.Context, client *vault.Client, secret *vau
 		RenewBuffer:   5, // equivalent to vault.DefaultLifetimeWatcherRenewBuffer,
 		RenewBehavior: vault.RenewBehaviorIgnoreErrors,
 	})
+
+	// The only errors the constructor can return are if the input parameter is nil or if the secret is nil, and we
+	// are always passing input and have validated the secret is not nil in the calling
 	if err != nil {
 		return false, fmt.Errorf("unable to initialize new lifetime watcher for renewing auth token: %w", err)
 	}
@@ -308,18 +317,15 @@ func manageTokenLifecycle(ctx context.Context, client *vault.Client, secret *vau
 		case err := <-watcher.DoneCh():
 			if err != nil {
 				contextutils.LoggerFrom(ctx).Debugf("Failed to renew token: %v. Re-attempting login.", err)
-				contextutils.LoggerFrom(ctx).Infof("Failed to renew token: %v. Re-attempting login.", err)
 				return true, nil
 			}
 			// This occurs once the token has reached max TTL.
 			contextutils.LoggerFrom(ctx).Debugf("Token can no longer be renewed. Re-attempting login.")
-			contextutils.LoggerFrom(ctx).Infof("Token can no longer be renewed. Re-attempting login.")
 			return true, nil
 
 		// Successfully completed renewal
 		case renewal := <-watcher.RenewCh():
 			contextutils.LoggerFrom(ctx).Debugf("Successfully renewed: %v.", renewal)
-			contextutils.LoggerFrom(ctx).Infof("Successfully renewed: %#v.", renewal)
 
 		case <-ctx.Done():
 			return false, nil
