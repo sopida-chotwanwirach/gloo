@@ -53,7 +53,9 @@ func NoopVaultClientInitFunc(c *vault.Client) VaultClientInitFunc {
 }
 
 var (
-	ErrNilVaultClient = errors.New("vault API client failed to initialize")
+	ErrNilVaultClient      = errors.New("vault API client failed to initialize")
+	ErrVaultAuthentication = errors.New("unable to authenticate to Vault")
+	ErrNoAuthInfo          = errors.New("no auth info was returned after login")
 )
 
 // NewVaultSecretClientFactory consumes a vault client along with a set of basic configurations for retrieving info with the client
@@ -240,11 +242,6 @@ func configureAwsIamAuth(ctx context.Context, aws *v1.Settings_VaultAwsAuth, cli
 	return client, nil
 }
 
-var (
-	errVaultAuthentication = errors.New("unable to authenticate to Vault")
-	errNoAuthInfo          = errors.New("no auth info was returned after login")
-)
-
 // The possibleErrors parameter is included for error messaging on the initial login attempts
 func loginWithRetry(ctx context.Context, client *vault.Client, awsAuth *awsauth.AWSAuth, possibleErrors bool) (*vault.Secret, error) {
 	// var count = 0
@@ -259,14 +256,14 @@ func loginWithRetry(ctx context.Context, client *vault.Client, awsAuth *awsauth.
 			contextutils.LoggerFrom(ctx).Errorf("unable to authenticate to Vault: %v", vaultErr)
 			utils.Measure(ctx, mLastLoginFailure, time.Now().Unix())
 			utils.MeasureOne(ctx, mLoginFailures)
-			return errVaultAuthentication
+			return ErrVaultAuthentication
 
 		}
 		if vaultLoginResp == nil {
 			contextutils.LoggerFrom(ctx).Errorf("no auth info was returned after login")
 			utils.Measure(ctx, mLastLoginFailure, time.Now().Unix())
 			utils.MeasureOne(ctx, mLoginFailures)
-			return errNoAuthInfo
+			return ErrNoAuthInfo
 		}
 		// if count < 3 {
 		// 	count++
