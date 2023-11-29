@@ -11,11 +11,35 @@ import (
 	"github.com/solo-io/go-utils/contextutils"
 	"github.com/solo-io/solo-kit/pkg/api/v1/clients/factory"
 
+	"github.com/hashicorp/vault/api"
 	vault "github.com/hashicorp/vault/api"
 	awsauth "github.com/hashicorp/vault/api/auth/aws"
 	errors "github.com/rotisserie/eris"
+	"github.com/solo-io/gloo/pkg/utils"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
+
+var (
+	mLastRenewSuccess = utils.MakeLastValueCounter("gloo.solo.io/vault/aws/lastRenewSuccess", "Timestamp of last successful renewal of vault secret lease")
+	mLastRenewFailure = utils.MakeLastValueCounter("gloo.solo.io/vault/aws/lastRenewFailure", "Timestamp of last failed renewal of vault secret lease")
+	mLastLoginSuccess = utils.MakeLastValueCounter("gloo.solo.io/vault/aws/lastLoginSuccess", "Timestamp of last successful authentaction of vault with AWS IAM")
+	mLastLoginFailure = utils.MakeLastValueCounter("gloo.solo.io/vault/aws/lastLoginFailure", "Timestamp of last failed authentaction of vault with AWS IAM")
+	mRenewSuccesses   = utils.MakeSumCounter("gloo.solo.io/vault/aws/renewSuccesses", "Number of successful renewals of vault secret lease")
+	mRenewFailures    = utils.MakeSumCounter("gloo.solo.io/vault/aws/renewFailures", "Number of failed renewals of vault secret lease")
+	mLoginSuccesses   = utils.MakeSumCounter("gloo.solo.io/vault/aws/loginSuccesses", "Number of successful authentactions of vault with AWS IAM")
+	mLoginFailures    = utils.MakeSumCounter("gloo.solo.io/vault/aws/loginFailures", "Number of failed authentactions of vault with AWS IAM")
+)
+
+type vaultSecretClientSettings struct {
+	vault *api.Client
+
+	// Vault's path where resources are located.
+	root string
+
+	// Tells Vault which secrets engine it should route traffic to. Defaults to "secret".
+	// https://learn.hashicorp.com/tutorials/vault/getting-started-secrets-engines
+	pathPrefix string
+}
 
 // The DefaultPathPrefix may be overridden to allow for non-standard vault mount paths
 const DefaultPathPrefix = "secret"
@@ -196,18 +220,18 @@ func configureAwsIamAuth(ctx context.Context, aws *v1.Settings_VaultAwsAuth, cli
 		return nil, err
 	}
 
-	authInfo, err := client.Auth().Login(ctx, awsAuth)
+	possibleErrors := len(possibleErrStrings) > 0
+	// The returned secret was only being checked for nil, and we are doing that in loginWithRetry now, so it is not needed
+	_, err = loginWithRetry(ctx, client, awsAuth, possibleErrors)
+	// The only errors we should ever hit are context errors because we are retrying on all other errors
 	if err != nil {
-		err := errors.Wrapf(err, "unable to login to AWS auth method")
-		// if using inferred credentials, add error information regarding setting credentials
-		if len(possibleErrStrings) > 0 {
-			err = errors.Wrapf(err, "using implicit credentials, consider setting aws secret access key and access key id")
-		}
+		if ctx.Err() != nil {
+			return nil, errors.Wrap(ctx.Err(), "unable to login to AWS auth method")
+		} else {
+			// This should never happen because we are retrying on all other errors
+			return nil, errors.Wrap(err, "unable to login to AWS auth method")
 
-		return nil, err
-	}
-	if authInfo == nil {
-		return nil, errors.New("no auth info was returned after login")
+		}
 	}
 
 	// set up auth token refreshing with client.NewLifetimeWatcher()
@@ -219,8 +243,45 @@ func configureAwsIamAuth(ctx context.Context, aws *v1.Settings_VaultAwsAuth, cli
 var (
 	errVaultAuthentication = errors.New("unable to authenticate to Vault")
 	errNoAuthInfo          = errors.New("no auth info was returned after login")
-	//errTokenRenewal        = errors.New("unable to start managing token lifecycle")
 )
+
+// The possibleErrors parameter is included for error messaging on the initial login attempts
+func loginWithRetry(ctx context.Context, client *vault.Client, awsAuth *awsauth.AWSAuth, possibleErrors bool) (*vault.Secret, error) {
+	// var count = 0
+	var vaultLoginResp *vault.Secret
+	err := contextutils.NewExponentialBackoff(contextutils.ExponentialBackoff{}).Backoff(ctx, func(ctx context.Context) error {
+		var vaultErr error
+		vaultLoginResp, vaultErr = client.Auth().Login(ctx, awsAuth)
+		if vaultErr != nil {
+			if possibleErrors {
+				vaultErr = errors.Wrapf(vaultErr, "using implicit credentials, consider setting aws secret access key and access key id")
+			}
+			contextutils.LoggerFrom(ctx).Errorf("unable to authenticate to Vault: %v", vaultErr)
+			utils.Measure(ctx, mLastLoginFailure, time.Now().Unix())
+			utils.MeasureOne(ctx, mLoginFailures)
+			return errVaultAuthentication
+
+		}
+		if vaultLoginResp == nil {
+			contextutils.LoggerFrom(ctx).Errorf("no auth info was returned after login")
+			utils.Measure(ctx, mLastLoginFailure, time.Now().Unix())
+			utils.MeasureOne(ctx, mLoginFailures)
+			return errNoAuthInfo
+		}
+		// if count < 3 {
+		// 	count++
+		// 	contextutils.LoggerFrom(ctx).Errorf("ERROR: Testing retry %d", count)
+		// 	return errors.Errorf("ERROR: Testing retry %d", count)
+		// }
+
+		utils.Measure(ctx, mLastLoginSuccess, time.Now().Unix())
+		utils.MeasureOne(ctx, mLastLoginSuccess)
+		contextutils.LoggerFrom(ctx).Debugf("Successfully authenticated to Vault %v", vaultLoginResp)
+		return nil
+	})
+
+	return vaultLoginResp, err
+}
 
 // Once you've set the token for your Vault client, you will need to periodically renew its lease.
 // taken from https://github.com/hashicorp/vault-examples/blob/main/examples/token-renewal/go/example.go
@@ -229,37 +290,17 @@ func renewToken(ctx context.Context, client *vault.Client, awsAuth *awsauth.AWSA
 
 	// var count = 0
 	for {
-		var vaultLoginResp *vault.Secret
-		err := contextutils.NewExponentialBackoff(contextutils.ExponentialBackoff{}).Backoff(ctx, func(ctx context.Context) error {
-			var vaultErr error
-			vaultLoginResp, vaultErr = client.Auth().Login(ctx, awsAuth)
-			if vaultErr != nil {
-				//contextutils.LoggerFrom(ctx).Fatalf("unable to authenticate to Vault: %v", vaultErr)
-				contextutils.LoggerFrom(ctx).Errorf("unable to authenticate to Vault: %v", vaultErr)
-				return errVaultAuthentication
-			}
-			if vaultLoginResp == nil {
-				//contextutils.LoggerFrom(ctx).Fatalf("no auth info was returned after login")
-				contextutils.LoggerFrom(ctx).Errorf("no auth info was returned after login")
-				return errNoAuthInfo
-			}
-			// if count < 3 {
-			// 	count++
-			// 	contextutils.LoggerFrom(ctx).Errorf("ERROR: Testing retry %d", count)
-			// 	return errors.Errorf("ERROR: Testing retry %d", count)
-			// }
-
-			return nil
-		})
-		// We should never hit these errors because the retry logic has no max time or retries, so it will retry until err is nil
+		vaultLoginResp, err := loginWithRetry(ctx, client, awsAuth, false)
+		// The only errors we should ever hit are context errors because we are retrying on all other errors
 		if err != nil {
 			if ctx.Err() != nil {
-				contextutils.LoggerFrom(ctx).Fatalf("renew token context error: %v", ctx.Err())
+				contextutils.LoggerFrom(ctx).Errorf("renew token context error: %v", ctx.Err())
+				return
 			} else {
+				// This should never happen because we are retrying on all other errors
 				contextutils.LoggerFrom(ctx).Fatalf("unable to authenticate to Vault: %v", err)
 			}
 		}
-		contextutils.LoggerFrom(ctx).Infof("Successfully authenticated to Vault %v", vaultLoginResp)
 
 		retry, tokenErr := manageTokenLifecycle(ctx, client, vaultLoginResp, watcherIncrement)
 
@@ -315,6 +356,8 @@ func manageTokenLifecycle(ctx context.Context, client *vault.Client, secret *vau
 		// extending it or renewing is disabled. In any case, the caller
 		// needs to attempt to log in again.
 		case err := <-watcher.DoneCh():
+			utils.Measure(ctx, mLastRenewFailure, time.Now().Unix())
+			utils.MeasureOne(ctx, mRenewFailures)
 			if err != nil {
 				contextutils.LoggerFrom(ctx).Debugf("Failed to renew token: %v. Re-attempting login.", err)
 				return true, nil
@@ -325,6 +368,8 @@ func manageTokenLifecycle(ctx context.Context, client *vault.Client, secret *vau
 
 		// Successfully completed renewal
 		case renewal := <-watcher.RenewCh():
+			utils.Measure(ctx, mLastRenewSuccess, time.Now().Unix())
+			utils.MeasureOne(ctx, mRenewSuccesses)
 			contextutils.LoggerFrom(ctx).Debugf("Successfully renewed: %v.", renewal)
 
 		case <-ctx.Done():
