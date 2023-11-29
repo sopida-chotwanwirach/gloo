@@ -250,7 +250,7 @@ func loginWithRetry(ctx context.Context, client *vault.Client, awsAuth *awsauth.
 	// var count = 0
 	var vaultLoginResp *vault.Secret
 	err := contextutils.NewExponentialBackoff(contextutils.ExponentialBackoff{
-		MaxRetries: 2,
+		//	MaxRetries: 2,
 	}).Backoff(ctx, func(ctx context.Context) error {
 		var vaultErr error
 		vaultLoginResp, vaultErr = client.Auth().Login(ctx, awsAuth)
