@@ -272,7 +272,7 @@ func loginWithRetry(ctx context.Context, client *vault.Client, awsAuth *awsauth.
 		// }
 
 		utils.Measure(ctx, mLastLoginSuccess, time.Now().Unix())
-		utils.MeasureOne(ctx, mLastLoginSuccess)
+		utils.MeasureOne(ctx, mLoginSuccesse)
 		contextutils.LoggerFrom(ctx).Debugf("Successfully authenticated to Vault %v", vaultLoginResp)
 		return nil
 	})
