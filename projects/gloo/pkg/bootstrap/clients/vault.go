@@ -22,12 +22,12 @@ import (
 var (
 	mLastRenewSuccess = utils.MakeLastValueCounter("gloo.solo.io/vault/aws/lastRenewSuccess", "Timestamp of last successful renewal of vault secret lease")
 	mLastRenewFailure = utils.MakeLastValueCounter("gloo.solo.io/vault/aws/lastRenewFailure", "Timestamp of last failed renewal of vault secret lease")
-	mLastLoginSuccess = utils.MakeLastValueCounter("gloo.solo.io/vault/aws/lastLoginSuccess", "Timestamp of last successful authentaction of vault with AWS IAM")
-	mLastLoginFailure = utils.MakeLastValueCounter("gloo.solo.io/vault/aws/lastLoginFailure", "Timestamp of last failed authentaction of vault with AWS IAM")
+	mLastLoginSuccess = utils.MakeLastValueCounter("gloo.solo.io/vault/aws/lastLoginSuccess", "Timestamp of last successful authentication of vault with AWS IAM")
+	mLastLoginFailure = utils.MakeLastValueCounter("gloo.solo.io/vault/aws/lastLoginFailure", "Timestamp of last failed authentication of vault with AWS IAM")
 	mRenewSuccesses   = utils.MakeSumCounter("gloo.solo.io/vault/aws/renewSuccesses", "Number of successful renewals of vault secret lease")
 	mRenewFailures    = utils.MakeSumCounter("gloo.solo.io/vault/aws/renewFailures", "Number of failed renewals of vault secret lease")
-	mLoginSuccesses   = utils.MakeSumCounter("gloo.solo.io/vault/aws/loginSuccesses", "Number of successful authentactions of vault with AWS IAM")
-	mLoginFailures    = utils.MakeSumCounter("gloo.solo.io/vault/aws/loginFailures", "Number of failed authentactions of vault with AWS IAM")
+	mLoginSuccesses   = utils.MakeSumCounter("gloo.solo.io/vault/aws/loginSuccesses", "Number of successful authentications of vault with AWS IAM")
+	mLoginFailures    = utils.MakeSumCounter("gloo.solo.io/vault/aws/loginFailures", "Number of failed authentications of vault with AWS IAM")
 )
 
 type vaultSecretClientSettings struct {
@@ -272,7 +272,7 @@ func loginWithRetry(ctx context.Context, client *vault.Client, awsAuth *awsauth.
 		// }
 
 		utils.Measure(ctx, mLastLoginSuccess, time.Now().Unix())
-		utils.MeasureOne(ctx, mLoginSuccesse)
+		utils.MeasureOne(ctx, mLoginSuccesses)
 		contextutils.LoggerFrom(ctx).Debugf("Successfully authenticated to Vault %v", vaultLoginResp)
 		return nil
 	})
