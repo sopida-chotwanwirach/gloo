@@ -1,6 +1,8 @@
 package e2e_test
 
 import (
+	"time"
+
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -19,13 +21,16 @@ const (
 	// If you want to run these tests locally, ensure that your local AWS credentials match,
 	// or use another role
 	// https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html
-	vaultAwsRole   = "arn:aws:iam::802411188784:user/gloo-edge-e2e-user"
+	// Please note that although this is used as a "role" in vault (the value is written to "auth/aws/role/vault-role")
+	// it is actually an aws user so if running locally *user* and not the role that gets created during manual setup
+	// vaultAwsRole = "arn:aws:iam::802411188784:user/gloo-edge-e2e-user"
+	vaultAwsRole   = "arn:aws:iam::802411188784:user/sheidkamp"
 	vaultAwsRegion = "us-east-1"
 
 	vaultRole = "vault-role"
 )
 
-var _ = Describe("Vault Secret Store (AWS Auth)", decorators.Vault, func() {
+var _ = FDescribe("Vault Secret Store (AWS Auth)", decorators.Vault, func() {
 
 	var (
 		testContext         *e2e.TestContextWithVault
@@ -99,6 +104,19 @@ var _ = Describe("Vault Secret Store (AWS Auth)", decorators.Vault, func() {
 		})
 
 		It("can read secret using resource client", func() {
+			Eventually(func(g Gomega) {
+				secret, err := testContext.TestClients().SecretClient.Read(
+					oauthSecret.GetMetadata().GetNamespace(),
+					oauthSecret.GetMetadata().GetName(),
+					clients.ReadOpts{
+						Ctx: testContext.Ctx(),
+					})
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(secret.GetOauth().GetClientSecret()).To(Equal("test"))
+			}, "5s", ".5s").Should(Succeed())
+
+			// Sleep and try again
+			time.Sleep(25 * time.Second)
 			Eventually(func(g Gomega) {
 				secret, err := testContext.TestClients().SecretClient.Read(
 					oauthSecret.GetMetadata().GetNamespace(),
