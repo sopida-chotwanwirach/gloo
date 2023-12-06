@@ -12,7 +12,6 @@ import (
 	"github.com/solo-io/solo-kit/pkg/api/v1/clients/factory"
 
 	"github.com/avast/retry-go"
-	"github.com/hashicorp/vault/api"
 	vault "github.com/hashicorp/vault/api"
 	awsauth "github.com/hashicorp/vault/api/auth/aws"
 	errors "github.com/rotisserie/eris"
@@ -31,17 +30,6 @@ var (
 	mLoginFailures    = utils.MakeSumCounter("gloo.solo.io/vault/aws/login_failures", "Number of failed authentications of vault with AWS IAM")
 )
 
-type vaultSecretClientSettings struct {
-	vault *api.Client
-
-	// Vault's path where resources are located.
-	root string
-
-	// Tells Vault which secrets engine it should route traffic to. Defaults to "secret".
-	// https://learn.hashicorp.com/tutorials/vault/getting-started-secrets-engines
-	pathPrefix string
-}
-
 // The DefaultPathPrefix may be overridden to allow for non-standard vault mount paths
 const DefaultPathPrefix = "secret"
 
@@ -57,6 +45,9 @@ var (
 	ErrNilVaultClient      = errors.New("vault API client failed to initialize")
 	ErrVaultAuthentication = errors.New("unable to authenticate to Vault")
 	ErrNoAuthInfo          = errors.New("no auth info was returned after login")
+	ErrInitializeWatcher   = func(err error) error {
+		return errors.Wrap(err, "unable to initialize new lifetime watcher for renewing auth token.")
+	}
 )
 
 // NewVaultSecretClientFactory consumes a vault client along with a set of basic configurations for retrieving info with the client
@@ -363,7 +354,7 @@ func manageTokenLifecycle(ctx context.Context, client *vault.Client, secret *vau
 	// The only errors the constructor can return are if the input parameter is nil or if the secret is nil, and we
 	// are always passing input and have validated the secret is not nil in the calling
 	if err != nil {
-		return false, fmt.Errorf("unable to initialize new lifetime watcher for renewing auth token: %w", err)
+		return false, ErrInitializeWatcher(err)
 	}
 
 	go watcher.Start()
