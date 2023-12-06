@@ -1,0 +1,13 @@
+changelog:
+  - type: DEPENDENCY_BUMP
+    dependencyOwner: hashicorp
+    dependencyRepo: vault/api
+    dependencyTag: v1.10.0
+  - type: DEPENDENCY_BUMP
+    dependencyOwner: hashicorp
+    dependencyRepo: vault/api/auth/aws
+    dependencyTag: v0.5.0
+  - type: NEW_FEATURE
+    issueLink: https://github.com/solo-io/solo-projects/issues/5438
+    resolvesIssue: false
+    description: Add renewal logic for vault tokens
