@@ -199,7 +199,7 @@ func (i *VaultInstance) addAdminPolicy() error {
 }
 
 func (i *VaultInstance) addAuthRole(awsAuthRole string) error {
-	_, err := i.Exec("write", "auth/aws/role/vault-role", "auth_type=iam", fmt.Sprintf("bound_iam_principal_arn=%s", awsAuthRole), "policies=admin")
+	_, err := i.Exec("write", "auth/aws/role/vault-role", "auth_type=iam", fmt.Sprintf("bound_iam_principal_arn=%s", awsAuthRole), "policies=admin", "default_ttl=10s", "max_ttl=10s")
 	return err
 }
 
