@@ -348,7 +348,7 @@ func (s *setupSyncer) Setup(ctx context.Context, kubeCache kube.SharedCache, mem
 				// The error is handled after we create the factory in getFactoryForSource
 				// for the multi client, and NewSecretResourceClientFactory for the
 				// traditional single client.
-				contextutils.LoggerFrom(ctx).Error(err)
+				contextutils.LoggerFrom(initCtx).Error(err)
 			}
 			return c
 		}

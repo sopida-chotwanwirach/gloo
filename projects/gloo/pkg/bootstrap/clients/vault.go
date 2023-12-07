@@ -73,17 +73,17 @@ func basicNewWatcherFunc(client *vault.Client, input *vault.LifetimeWatcherInput
 	return client.NewLifetimeWatcher(input)
 }
 
-type vaultManager struct {
+type vaultInterfaces struct {
 	login      loginFunc
 	newWatcher newWatcherFunc
 }
 
-type newVaultManagerParams struct {
+type newVaultInterfacesParams struct {
 	Login      loginFunc
 	NewWatcher newWatcherFunc
 }
 
-func newVaultManager(params newVaultManagerParams) *vaultManager {
+func newVaultInterfaces(params newVaultInterfacesParams) *vaultInterfaces {
 	if params.Login == nil {
 		params.Login = basicLoginFunc
 	}
@@ -92,7 +92,7 @@ func newVaultManager(params newVaultManagerParams) *vaultManager {
 		params.NewWatcher = basicNewWatcherFunc
 	}
 
-	return &vaultManager{
+	return &vaultInterfaces{
 		login:      params.Login,
 		newWatcher: params.NewWatcher,
 	}
@@ -108,9 +108,9 @@ func VaultClientForSettings(ctx context.Context, vaultSettings *v1.Settings_Vaul
 		return nil, err
 	}
 
-	vaultManager := newVaultManager(newVaultManagerParams{})
+	vaultInterfaces := newVaultInterfaces(newVaultInterfacesParams{})
 
-	return vaultManager.configureVaultAuth(ctx, vaultSettings, client)
+	return vaultInterfaces.configureVaultAuth(ctx, vaultSettings, client)
 }
 
 func parseVaultSettings(vaultSettings *v1.Settings_VaultSecrets) (*vault.Config, error) {
@@ -180,14 +180,14 @@ func parseTlsSettings(vaultSettings *v1.Settings_VaultSecrets) *vault.TLSConfig 
 
 }
 
-func (vm *vaultManager) configureVaultAuth(ctx context.Context, vaultSettings *v1.Settings_VaultSecrets, client *vault.Client) (*vault.Client, error) {
+func (vi *vaultInterfaces) configureVaultAuth(ctx context.Context, vaultSettings *v1.Settings_VaultSecrets, client *vault.Client) (*vault.Client, error) {
 	// each case returns
 	switch tlsCfg := vaultSettings.GetAuthMethod().(type) {
 	case *v1.Settings_VaultSecrets_AccessToken:
 		client.SetToken(tlsCfg.AccessToken)
 		return client, nil
 	case *v1.Settings_VaultSecrets_Aws:
-		return vm.configureAwsAuth(ctx, tlsCfg.Aws, client)
+		return vi.configureAwsAuth(ctx, tlsCfg.Aws, client)
 	default:
 		// We don't have one of the defined auth methods, so try to fall back to the
 		// deprecated token field before erroring
@@ -202,11 +202,11 @@ func (vm *vaultManager) configureVaultAuth(ctx context.Context, vaultSettings *v
 
 // This indirection function exists to more easily enable further extenstion of AWS auth
 // to support EC2 auth method in the future
-func (vm *vaultManager) configureAwsAuth(ctx context.Context, aws *v1.Settings_VaultAwsAuth, client *vault.Client) (*vault.Client, error) {
-	return vm.configureAwsIamAuth(ctx, aws, client)
+func (vi *vaultInterfaces) configureAwsAuth(ctx context.Context, aws *v1.Settings_VaultAwsAuth, client *vault.Client) (*vault.Client, error) {
+	return vi.configureAwsIamAuth(ctx, aws, client)
 }
 
-func (vm *vaultManager) configureAwsIamAuth(ctx context.Context, aws *v1.Settings_VaultAwsAuth, client *vault.Client) (*vault.Client, error) {
+func (vi *vaultInterfaces) configureAwsIamAuth(ctx context.Context, aws *v1.Settings_VaultAwsAuth, client *vault.Client) (*vault.Client, error) {
 	// The AccessKeyID and SecretAccessKey are not required in the case of using temporary credentials from assumed roles with AWS STS or IRSA.
 	// STS: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_use-resources.html
 	// IRSA: https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html
@@ -261,7 +261,7 @@ func (vm *vaultManager) configureAwsIamAuth(ctx context.Context, aws *v1.Setting
 		customLoginError = errors.New("using implicit credentials, consider setting aws secret access key and access key id")
 	}
 	// The returned secret was only being checked for nil, and we are doing that in loginWithRetry now, so it is not needed
-	_, err = vm.loginWithRetry(ctx, client, awsAuth, customLoginError)
+	_, err = vi.loginWithRetry(ctx, client, awsAuth, customLoginError)
 	// The only errors we should ever hit are context errors because we are retrying on all other errors
 	if err != nil {
 		if ctx.Err() != nil {
@@ -274,13 +274,13 @@ func (vm *vaultManager) configureAwsIamAuth(ctx context.Context, aws *v1.Setting
 	}
 
 	// set up auth token refreshing with client.NewLifetimeWatcher()
-	go vm.renewToken(ctx, client, awsAuth, int(aws.GetLeaseIncrement()))
+	go vi.renewToken(ctx, client, awsAuth, int(aws.GetLeaseIncrement()))
 
 	return client, nil
 }
 
 // The possibleErrors parameter is included for error messaging on the initial login attempts
-func (vm *vaultManager) loginWithRetry(ctx context.Context, client *vault.Client, awsAuth *awsauth.AWSAuth, customErr error) (*vault.Secret, error) {
+func (vi *vaultInterfaces) loginWithRetry(ctx context.Context, client *vault.Client, awsAuth *awsauth.AWSAuth, customErr error) (*vault.Secret, error) {
 	// var count = 0
 	var vaultLoginResp *vault.Secret
 
@@ -290,7 +290,7 @@ func (vm *vaultManager) loginWithRetry(ctx context.Context, client *vault.Client
 		}
 
 		var vaultErr error
-		vaultLoginResp, vaultErr = vm.login(ctx, client, awsAuth) //client.Auth().Login(ctx, awsAuth)
+		vaultLoginResp, vaultErr = vi.login(ctx, client, awsAuth) //client.Auth().Login(ctx, awsAuth)
 		if vaultErr != nil {
 			if customErr != nil {
 				vaultErr = fmt.Errorf("%w; %w", vaultErr, customErr)
@@ -328,10 +328,10 @@ func (vm *vaultManager) loginWithRetry(ctx context.Context, client *vault.Client
 
 // Once you've set the token for your Vault client, you will need to periodically renew its lease.
 // taken from https://github.com/hashicorp/vault-examples/blob/main/examples/token-renewal/go/example.go
-func (vm *vaultManager) renewToken(ctx context.Context, client *vault.Client, awsAuth *awsauth.AWSAuth, watcherIncrement int) {
+func (vi *vaultInterfaces) renewToken(ctx context.Context, client *vault.Client, awsAuth *awsauth.AWSAuth, watcherIncrement int) {
 	contextutils.LoggerFrom(ctx).Debugf("Starting renewToken goroutine")
 	for {
-		vaultLoginResp, err := vm.loginWithRetry(ctx, client, awsAuth, nil)
+		vaultLoginResp, err := vi.loginWithRetry(ctx, client, awsAuth, nil)
 		// The only errors we should ever hit are context errors because we are retrying on all other errors
 		if err != nil {
 			if ctx.Err() != nil {
@@ -343,7 +343,7 @@ func (vm *vaultManager) renewToken(ctx context.Context, client *vault.Client, aw
 			}
 		}
 
-		retry, tokenErr := vm.manageTokenLifecycle(ctx, client, vaultLoginResp, watcherIncrement)
+		retry, tokenErr := vi.manageTokenLifecycle(ctx, client, vaultLoginResp, watcherIncrement)
 
 		// The only error this function can return is if the vaultLoginResp is nil, and we have checked against that in loginWithRetry, which
 		// is currently the only called.
@@ -363,7 +363,7 @@ func (vm *vaultManager) renewToken(ctx context.Context, client *vault.Client, aw
 // Starts token lifecycle management
 // otherwise returns nil so we can attempt login again.
 // based on https://github.com/hashicorp/vault-examples/blob/main/examples/token-renewal/go/example.go
-func (vm *vaultManager) manageTokenLifecycle(ctx context.Context, client *vault.Client, secret *vault.Secret, watcherIncrement int) (bool, error) {
+func (vi *vaultInterfaces) manageTokenLifecycle(ctx context.Context, client *vault.Client, secret *vault.Secret, watcherIncrement int) (bool, error) {
 	// Make sure the token is renewable
 	if renewable, err := secret.TokenIsRenewable(); !renewable || err != nil {
 		// If the token is not renewable and we immediately try to renew it, we will just keep trying and hitting the same error
@@ -384,7 +384,7 @@ func (vm *vaultManager) manageTokenLifecycle(ctx context.Context, client *vault.
 		return retryLogin, nil
 	}
 
-	watcher, err := vm.newWatcher(client, &vault.LifetimeWatcherInput{
+	watcher, err := vi.newWatcher(client, &vault.LifetimeWatcherInput{
 		Secret:    secret,
 		Increment: watcherIncrement,
 		// Below this comment we are manually setting the parameters to current defaults to protect against future changes
