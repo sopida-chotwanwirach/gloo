@@ -72,7 +72,7 @@ var _ = Describe("Vault Secret Store (AWS Auth)", decorators.Vault, func() {
 		testContext.RunVault()
 
 		// We need to turn on Vault AWS Auth after it has started running
-		err := testContext.VaultInstance().EnableAWSCredentialsAuthMethod(vaultSecretSettings, vaultAwsRole)
+		err := testContext.VaultInstance().EnableAWSCredentialsAuthMethod(vaultSecretSettings, vaultAwsRole, []string{"default_ttl=10s", "max_ttl=10s"})
 		Expect(err).NotTo(HaveOccurred())
 
 		testContext.JustBeforeEach()
