@@ -23,8 +23,8 @@ const (
 	// https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html
 	// Please note that although this is used as a "role" in vault (the value is written to "auth/aws/role/vault-role")
 	// it is actually an aws user so if running locally *user* and not the role that gets created during manual setup
-	// vaultAwsRole = "arn:aws:iam::802411188784:user/gloo-edge-e2e-user"
-	vaultAwsRole   = "arn:aws:iam::802411188784:user/sheidkamp"
+	vaultAwsRole = "arn:aws:iam::802411188784:user/gloo-edge-e2e-user"
+	//vaultAwsRole   = "arn:aws:iam::802411188784:user/sheidkamp"
 	vaultAwsRegion = "us-east-1"
 
 	vaultRole = "vault-role"
