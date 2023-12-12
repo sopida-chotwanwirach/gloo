@@ -11,6 +11,7 @@ import (
 	"github.com/solo-io/gloo/projects/gateway2/query"
 	"github.com/solo-io/gloo/projects/gateway2/reports"
 	gloot "github.com/solo-io/gloo/projects/gateway2/translator"
+	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins/registry"
 	gloo_solo_io "github.com/solo-io/gloo/projects/gloo/pkg/api/v1"
 	v1snap "github.com/solo-io/gloo/projects/gloo/pkg/api/v1/gloosnapshot"
 	"github.com/solo-io/gloo/projects/gloo/pkg/plugins"
@@ -157,7 +158,8 @@ func (s *XdsSyncer) Start(
 			return
 		}
 		queries := query.NewData(s.cli, s.scheme)
-		t := gloot.NewTranslator()
+		plugins := registry.NewHTTPFilterPluginRegistry(queries)
+		t := gloot.NewTranslator(plugins)
 		proxies := gloo_solo_io.ProxyList{}
 		rm := reports.NewReportMap()
 		r := reports.NewReporter(&rm)

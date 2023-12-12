@@ -3,8 +3,11 @@ package registry
 import (
 	"fmt"
 
+	sologatewayv1 "github.com/solo-io/gloo/projects/gateway/pkg/api/v1"
+	"github.com/solo-io/gloo/projects/gateway2/query"
 	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins/mirror"
 	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins/redirect"
+	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins/routeoptions"
 	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins/urlrewrite"
 
 	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins"
@@ -45,7 +48,7 @@ func (h *httpFilterPluginRegistry) GetExtensionPlugin(extensionRef *gwv1.LocalOb
 	return p, nil
 }
 
-func NewHTTPFilterPluginRegistry() HTTPFilterPluginRegistry {
+func NewHTTPFilterPluginRegistry(queries query.GatewayQueries) HTTPFilterPluginRegistry {
 	return &httpFilterPluginRegistry{
 		standardPlugins: map[gwv1.HTTPRouteFilterType]filterplugins.FilterPlugin{
 			gwv1.HTTPRouteFilterRequestHeaderModifier:  headermodifier.NewPlugin(),
@@ -54,6 +57,11 @@ func NewHTTPFilterPluginRegistry() HTTPFilterPluginRegistry {
 			gwv1.HTTPRouteFilterRequestRedirect:        redirect.NewPlugin(),
 			gwv1.HTTPRouteFilterRequestMirror:          mirror.NewPlugin(),
 		},
-		extensionPlugins: map[schema.GroupKind]filterplugins.FilterPlugin{},
+		extensionPlugins: map[schema.GroupKind]filterplugins.FilterPlugin{
+			{
+				Group: sologatewayv1.RouteOptionGVK.Group,
+				Kind:  sologatewayv1.RouteOptionGVK.Kind,
+			}: routeoptions.NewPlugin(queries),
+		},
 	}
 }

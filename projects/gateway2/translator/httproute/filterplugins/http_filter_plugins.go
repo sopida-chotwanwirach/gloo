@@ -19,7 +19,7 @@ type RouteContext struct {
 }
 
 type FilterPlugin interface {
-	// outputRoute.Options is guaranteed to be non-nil
+	// outputRoute.Options is guaranteed to be non-nil (TODO: confirm this still holds)
 	ApplyFilter(
 		ctx *RouteContext,
 		filter gwv1.HTTPRouteFilter,
