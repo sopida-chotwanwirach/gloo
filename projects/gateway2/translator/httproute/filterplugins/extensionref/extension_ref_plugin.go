@@ -3,26 +3,25 @@ package extensionref
 import (
 	errors "github.com/rotisserie/eris"
 	"github.com/solo-io/gloo/projects/gateway2/query"
+	"github.com/solo-io/gloo/projects/gateway2/translator/extensions"
 	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins"
 	v1 "github.com/solo-io/gloo/projects/gloo/pkg/api/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	gwv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
-type GetPluginFunc = func(gk schema.GroupKind) (filterplugins.ExtPlugin, error)
-
 type Plugin struct {
-	queries   query.GatewayQueries
-	getPlugin GetPluginFunc
+	queries  query.GatewayQueries
+	registry *extensions.ExtensionPluginRegistry
 }
 
 func NewPlugin(
 	queries query.GatewayQueries,
-	getPlugin GetPluginFunc,
+	registry *extensions.ExtensionPluginRegistry,
 ) *Plugin {
 	return &Plugin{
 		queries,
-		getPlugin,
+		registry,
 	}
 }
 
@@ -42,7 +41,7 @@ func (p *Plugin) ApplyFilter(
 		Group: string(filter.ExtensionRef.Group),
 		Kind:  string(filter.ExtensionRef.Kind),
 	}
-	plugin, err := p.getPlugin(gk)
+	plugin, err := p.registry.GetExtensionPlugin(gk)
 	if err != nil {
 		//TODO do stuff
 		return err

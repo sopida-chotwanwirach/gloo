@@ -16,7 +16,7 @@ import (
 )
 
 func AssertExpectedRouteExtPlugin(
-	plugin filterplugins.ExtPlugin,
+	plugin filterplugins.ExtensionPlugin,
 	cfg client.Object,
 	expectedRoute *v1.Route,
 	logActual bool,
@@ -51,7 +51,7 @@ func AssertExpectedRouteWith(
 }
 
 func assertExpectedRouteExt(
-	plugin filterplugins.ExtPlugin,
+	plugin filterplugins.ExtensionPlugin,
 	cfg client.Object,
 	outputRoute *v1.Route,
 	expectedRoute *v1.Route,
@@ -111,7 +111,7 @@ func assertExpectedRoute(
 }
 
 func applyExtPlugin(
-	plugin filterplugins.ExtPlugin,
+	plugin filterplugins.ExtensionPlugin,
 	ctx *filterplugins.RouteContext,
 	cfg client.Object,
 	outputRoute *v1.Route,

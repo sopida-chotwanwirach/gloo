@@ -5,15 +5,13 @@ import (
 
 	sologatewayv1 "github.com/solo-io/gloo/projects/gateway/pkg/api/v1"
 	solokubev1 "github.com/solo-io/gloo/projects/gateway/pkg/api/v1/kube/apis/gateway.solo.io/v1"
-	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins"
+	"github.com/solo-io/gloo/projects/gateway2/translator/extensions"
 	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins/extensionref"
 	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins/filtertests"
-	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins/registry"
 	"github.com/solo-io/gloo/projects/gateway2/translator/testutils"
 	v1 "github.com/solo-io/gloo/projects/gloo/pkg/api/v1"
 	"github.com/solo-io/gloo/projects/gloo/pkg/api/v1/options/faultinjection"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
@@ -30,11 +28,7 @@ var _ = Describe("ExtensionRefPlugin", func() {
 		) {
 			deps := []client.Object{routeOption()}
 			queries := testutils.BuildGatewayQueries(deps)
-			reg := registry.NewHTTPFilterPluginRegistry(queries)
-			getFunc := func(gk schema.GroupKind) (filterplugins.ExtPlugin, error) {
-				return reg.GetExtensionPlugin(gk)
-			}
-			plugin := extensionref.NewPlugin(queries, getFunc)
+			plugin := extensionref.NewPlugin(queries, extensions.NewExtensionPluginRegistry())
 			filtertests.AssertExpectedRoute(
 				plugin,
 				filter,

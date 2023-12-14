@@ -28,7 +28,7 @@ type FilterPlugin interface {
 	) error
 }
 
-type ExtPlugin interface {
+type ExtensionPlugin interface {
 	ApplyExtPlugin(
 		ctx *RouteContext,
 		cfg client.Object,
