@@ -199,7 +199,6 @@ type controllerReconciler struct {
 
 func (r *controllerReconciler) ReconcileRouteOptions(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	// eventually reconcile only effected routes/listeners etc
-	log.FromContext(ctx).Info("LAW: triggering reconcile for RouteOptions")
 	r.kick(ctx)
 	return ctrl.Result{}, nil
 }
