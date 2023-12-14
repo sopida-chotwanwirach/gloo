@@ -1,4 +1,4 @@
-package routeoptions_test
+package extensionref_test
 
 import (
 	"testing"
@@ -9,5 +9,5 @@ import (
 
 func TestHeadermodifier(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "RouteOptions Suite")
+	RunSpecs(t, "ExtensionRef Suite")
 }

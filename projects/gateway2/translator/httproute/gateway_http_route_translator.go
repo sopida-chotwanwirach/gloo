@@ -281,19 +281,10 @@ func applyFilterPlugin(
 	filter gwv1.HTTPRouteFilter,
 	outputRoute *v1.Route,
 ) error {
-	var (
-		plugin filterplugins.FilterPlugin
-		err    error
-	)
-	if filter.Type == gwv1.HTTPRouteFilterExtensionRef {
-		plugin, err = plugins.GetExtensionPlugin(filter.ExtensionRef)
-	} else {
-		plugin, err = plugins.GetStandardPlugin(filter.Type)
-	}
+	plugin, err := plugins.GetStandardPlugin(filter.Type)
 	if err != nil {
 		return err
 	}
-
 	return plugin.ApplyFilter(
 		ctx,
 		filter,

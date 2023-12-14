@@ -5,6 +5,7 @@ import (
 
 	sologatewayv1 "github.com/solo-io/gloo/projects/gateway/pkg/api/v1"
 	"github.com/solo-io/gloo/projects/gateway2/query"
+	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins/extensionref"
 	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins/mirror"
 	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins/redirect"
 	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins/routeoptions"
@@ -18,12 +19,12 @@ import (
 
 type HTTPFilterPluginRegistry interface {
 	GetStandardPlugin(filterType gwv1.HTTPRouteFilterType) (filterplugins.FilterPlugin, error)
-	GetExtensionPlugin(extensionRef *gwv1.LocalObjectReference) (filterplugins.FilterPlugin, error)
+	GetExtensionPlugin(gk schema.GroupKind) (filterplugins.ExtPlugin, error)
 }
 
 type httpFilterPluginRegistry struct {
 	standardPlugins  map[gwv1.HTTPRouteFilterType]filterplugins.FilterPlugin
-	extensionPlugins map[schema.GroupKind]filterplugins.FilterPlugin
+	extensionPlugins map[schema.GroupKind]filterplugins.ExtPlugin
 }
 
 func (h *httpFilterPluginRegistry) GetStandardPlugin(filterType gwv1.HTTPRouteFilterType) (filterplugins.FilterPlugin, error) {
@@ -34,22 +35,19 @@ func (h *httpFilterPluginRegistry) GetStandardPlugin(filterType gwv1.HTTPRouteFi
 	return p, nil
 }
 
-func (h *httpFilterPluginRegistry) GetExtensionPlugin(extensionRef *gwv1.LocalObjectReference) (filterplugins.FilterPlugin, error) {
-	if extensionRef == nil {
-		return nil, fmt.Errorf("extension ref is required")
-	}
+func (h *httpFilterPluginRegistry) GetExtensionPlugin(gk schema.GroupKind) (filterplugins.ExtPlugin, error) {
 	p, ok := h.extensionPlugins[schema.GroupKind{
-		Group: string(extensionRef.Group),
-		Kind:  string(extensionRef.Kind),
+		Group: string(gk.Group),
+		Kind:  string(gk.Kind),
 	}]
 	if !ok {
-		return nil, fmt.Errorf("no support for extension ref %+v", extensionRef)
+		return nil, fmt.Errorf("no extenstion support for gk %+v", gk)
 	}
 	return p, nil
 }
 
 func NewHTTPFilterPluginRegistry(queries query.GatewayQueries) HTTPFilterPluginRegistry {
-	return &httpFilterPluginRegistry{
+	reg := &httpFilterPluginRegistry{
 		standardPlugins: map[gwv1.HTTPRouteFilterType]filterplugins.FilterPlugin{
 			gwv1.HTTPRouteFilterRequestHeaderModifier:  headermodifier.NewPlugin(),
 			gwv1.HTTPRouteFilterResponseHeaderModifier: headermodifier.NewPlugin(),
@@ -57,11 +55,16 @@ func NewHTTPFilterPluginRegistry(queries query.GatewayQueries) HTTPFilterPluginR
 			gwv1.HTTPRouteFilterRequestRedirect:        redirect.NewPlugin(),
 			gwv1.HTTPRouteFilterRequestMirror:          mirror.NewPlugin(),
 		},
-		extensionPlugins: map[schema.GroupKind]filterplugins.FilterPlugin{
+		extensionPlugins: map[schema.GroupKind]filterplugins.ExtPlugin{
 			{
 				Group: sologatewayv1.RouteOptionGVK.Group,
 				Kind:  sologatewayv1.RouteOptionGVK.Kind,
-			}: routeoptions.NewPlugin(queries),
+			}: routeoptions.NewPlugin(),
 		},
 	}
+	getPlugin := func(gk schema.GroupKind) (filterplugins.ExtPlugin, error) {
+		return reg.GetExtensionPlugin(gk)
+	}
+	reg.standardPlugins[gwv1.HTTPRouteFilterExtensionRef] = extensionref.NewPlugin(queries, getPlugin)
+	return reg
 }

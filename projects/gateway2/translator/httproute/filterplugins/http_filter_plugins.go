@@ -6,6 +6,7 @@ import (
 	"github.com/solo-io/gloo/projects/gateway2/query"
 	"github.com/solo-io/gloo/projects/gateway2/reports"
 	v1 "github.com/solo-io/gloo/projects/gloo/pkg/api/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
@@ -23,6 +24,14 @@ type FilterPlugin interface {
 	ApplyFilter(
 		ctx *RouteContext,
 		filter gwv1.HTTPRouteFilter,
+		outputRoute *v1.Route,
+	) error
+}
+
+type ExtPlugin interface {
+	ApplyExtPlugin(
+		ctx *RouteContext,
+		cfg client.Object,
 		outputRoute *v1.Route,
 	) error
 }

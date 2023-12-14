@@ -1,4 +1,4 @@
-package routeoptions
+package routeoptions_test
 
 import (
 	. "github.com/onsi/ginkgo/v2"
@@ -8,22 +8,14 @@ import (
 	gwscheme "github.com/solo-io/gloo/projects/gateway2/controller/scheme"
 	"github.com/solo-io/gloo/projects/gateway2/query"
 	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins/filtertests"
-	"github.com/solo-io/gloo/projects/gateway2/translator/testutils"
+	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins/routeoptions"
 	v1 "github.com/solo-io/gloo/projects/gloo/pkg/api/v1"
 	"github.com/solo-io/gloo/projects/gloo/pkg/api/v1/options/faultinjection"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-	gwv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 var _ = Describe("RouteOptionsPlugin", func() {
-	// var (
-	// 	scheme     *runtime.Scheme
-	// 	builder    *fake.ClientBuilder
-	// 	fakeClient client.Client
-	// )
-
 	BeforeEach(func() {
 		scheme := gwscheme.NewScheme()
 		builder := fake.NewClientBuilder().WithScheme(scheme)
@@ -36,30 +28,28 @@ var _ = Describe("RouteOptionsPlugin", func() {
 	DescribeTable(
 		"applying RouteOptions to translated routes",
 		func(
-			filter gwv1.HTTPRouteFilter,
+			cfg *solokubev1.RouteOption,
 			expectedRoute *v1.Route,
 		) {
-			// fakeClient = builder.WithObjects(routeOption()).Build()
-			// queries := query.NewData(fakeClient, scheme)
-
-			deps := []client.Object{routeOption()}
-			queries := testutils.BuildGatewayQueries(deps)
-			plugin := NewPlugin(queries)
-			filtertests.AssertExpectedRoute(
+			plugin := routeoptions.NewPlugin()
+			filtertests.AssertExpectedRouteExtPlugin(
 				plugin,
-				filter,
+				cfg,
 				expectedRoute,
 				true,
 			)
 		},
 		Entry(
 			"applies fault injecton RouteOptions directly from resource to output route",
-			gwv1.HTTPRouteFilter{
-				Type: gwv1.HTTPRouteFilterExtensionRef,
-				ExtensionRef: &gwv1.LocalObjectReference{
-					Group: gwv1.Group(sologatewayv1.RouteOptionGVK.Group),
-					Kind:  gwv1.Kind(sologatewayv1.RouteOptionGVK.Kind),
-					Name:  "policy",
+			&solokubev1.RouteOption{
+				Spec: sologatewayv1.RouteOption{
+					Options: &v1.RouteOptions{
+						Faults: &faultinjection.RouteFaults{
+							Abort: &faultinjection.RouteAbort{
+								Percentage: 1.00,
+							},
+						},
+					},
 				},
 			},
 			&v1.Route{
@@ -74,21 +64,3 @@ var _ = Describe("RouteOptionsPlugin", func() {
 		),
 	)
 })
-
-func routeOption() *solokubev1.RouteOption {
-	return &solokubev1.RouteOption{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "policy",
-			Namespace: "default",
-		},
-		Spec: sologatewayv1.RouteOption{
-			Options: &v1.RouteOptions{
-				Faults: &faultinjection.RouteFaults{
-					Abort: &faultinjection.RouteAbort{
-						Percentage: 1.00,
-					},
-				},
-			},
-		},
-	}
-}
