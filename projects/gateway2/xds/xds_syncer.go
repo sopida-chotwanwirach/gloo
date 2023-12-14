@@ -143,7 +143,6 @@ func (s *XdsSyncer) Start(
 	ctx context.Context,
 ) error {
 	proxyApiSnapshot := &v1snap.ApiSnapshot{}
-	// proxyApiSnapshot := &v1snap.ApiSnapshot{}
 	var (
 		discoveryWarmed bool
 		secretsWarmed   bool

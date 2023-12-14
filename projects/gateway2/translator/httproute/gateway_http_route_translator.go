@@ -95,7 +95,7 @@ func translateGatewayHTTPRouteRule(
 			reporter.SetCondition(reports.HTTPRouteCondition{
 				Type:   gwv1.RouteConditionPartiallyInvalid,
 				Status: metav1.ConditionTrue,
-				Reason: gwv1.RouteReasonIncompatibleFilters,
+				Reason: gwv1.RouteReasonIncompatibleFilters, //TODO(Law): use this reason for all errors??
 			})
 			continue // drop route
 		}
