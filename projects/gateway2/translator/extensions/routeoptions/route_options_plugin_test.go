@@ -7,8 +7,8 @@ import (
 	solokubev1 "github.com/solo-io/gloo/projects/gateway/pkg/api/v1/kube/apis/gateway.solo.io/v1"
 	gwscheme "github.com/solo-io/gloo/projects/gateway2/controller/scheme"
 	"github.com/solo-io/gloo/projects/gateway2/query"
-	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins/filtertests"
-	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins/routeoptions"
+	"github.com/solo-io/gloo/projects/gateway2/translator/extensions/extensiontests"
+	"github.com/solo-io/gloo/projects/gateway2/translator/extensions/routeoptions"
 	v1 "github.com/solo-io/gloo/projects/gloo/pkg/api/v1"
 	"github.com/solo-io/gloo/projects/gloo/pkg/api/v1/options/faultinjection"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -32,7 +32,7 @@ var _ = Describe("RouteOptionsPlugin", func() {
 			expectedRoute *v1.Route,
 		) {
 			plugin := routeoptions.NewPlugin()
-			filtertests.AssertExpectedRouteExtPlugin(
+			extensiontests.AssertExpectedRouteExtPlugin(
 				plugin,
 				cfg,
 				expectedRoute,

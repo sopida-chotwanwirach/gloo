@@ -97,6 +97,7 @@ func translateGatewayHTTPRouteRule(
 				Status: metav1.ConditionTrue,
 				Reason: gwv1.RouteReasonIncompatibleFilters, //TODO(Law): use this reason for all errors??
 			})
+			//TODO(Law): should we log these errors? we also need to propagate the error message to the condition msg
 			continue // drop route
 		}
 		if outputRoute.Action == nil {

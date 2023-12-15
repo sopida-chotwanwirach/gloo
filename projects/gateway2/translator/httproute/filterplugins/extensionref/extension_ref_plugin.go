@@ -43,19 +43,16 @@ func (p *Plugin) ApplyFilter(
 	}
 	plugin, err := p.registry.GetExtensionPlugin(gk)
 	if err != nil {
-		//TODO do stuff
 		return err
 	}
 
 	obj, err := p.queries.GetLocalObjRef(ctx.Ctx, p.queries.ObjToFrom(ctx.Route), *filter.ExtensionRef)
 	if err != nil {
-		//TODO: handle not found
 		return err
 	}
 
-	err = plugin.ApplyExtPlugin(ctx, obj, outputRoute)
+	err = plugin.ApplyExtPlugin(ctx.Ctx, obj, outputRoute)
 	if err != nil {
-		//TODO do stuff
 		return err
 	}
 	return nil
