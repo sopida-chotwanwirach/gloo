@@ -3,10 +3,10 @@ package extensions
 import (
 	"fmt"
 
-	sologatewayv1 "github.com/solo-io/gloo/projects/gateway/pkg/api/v1"
+	v1 "github.com/solo-io/gloo/projects/gateway/pkg/api/v1"
+	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins"
 	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins/routeoptions"
 
-	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -18,8 +18,8 @@ func NewExtensionPluginRegistry() *ExtensionPluginRegistry {
 	return &ExtensionPluginRegistry{
 		extensionPlugins: map[schema.GroupKind]filterplugins.ExtensionPlugin{
 			{
-				Group: sologatewayv1.RouteOptionGVK.Group,
-				Kind:  sologatewayv1.RouteOptionGVK.Kind,
+				Group: v1.RouteOptionGVK.Group,
+				Kind:  v1.RouteOptionGVK.Kind,
 			}: routeoptions.NewPlugin(),
 		},
 	}
