@@ -268,26 +268,13 @@ func applyFilters(
 	outputRoute *v1.Route,
 ) error {
 	for _, filter := range filters {
-		if err := applyFilterPlugin(ctx, plugins, filter, outputRoute); err != nil {
+		plugin, err := plugins.GetStandardPlugin(filter.Type)
+		if err != nil {
+			return err
+		}
+		if err := plugin.ApplyFilter(ctx, filter, outputRoute); err != nil {
 			return err
 		}
 	}
 	return nil
-}
-
-func applyFilterPlugin(
-	ctx *filterplugins.RouteContext,
-	plugins registry.HTTPFilterPluginRegistry,
-	filter gwv1.HTTPRouteFilter,
-	outputRoute *v1.Route,
-) error {
-	plugin, err := plugins.GetStandardPlugin(filter.Type)
-	if err != nil {
-		return err
-	}
-	return plugin.ApplyFilter(
-		ctx,
-		filter,
-		outputRoute,
-	)
 }
