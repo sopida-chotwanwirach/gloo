@@ -76,7 +76,6 @@ func (tc TestCase) Run(ctx context.Context) (map[types.NamespacedName]bool, erro
 		}
 		reportsMap := reports.NewReportMap()
 		reporter := reports.NewReporter(&reportsMap)
-		// TODO: add dependencies to fake client
 		plugins := registry.NewHTTPFilterPluginRegistry(queries, extensions.NewExtensionPluginRegistry())
 		// translate gateway
 		proxy := NewTranslator(plugins).TranslateProxy(
