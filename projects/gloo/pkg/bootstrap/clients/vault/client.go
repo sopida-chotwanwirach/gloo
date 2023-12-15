@@ -44,6 +44,11 @@ func AuthenticateClient(ctx context.Context, client *vault.Client, clientAuth Cl
 		return nil, err
 	}
 
+	err = clientAuth.StartRenewal(ctx, client, secret)
+	if err != nil {
+		return nil, err
+	}
+
 	return secret, nil
 }
 

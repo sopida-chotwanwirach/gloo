@@ -24,7 +24,7 @@ type ClientAuth interface {
 	vault.AuthMethod
 	// Start Renewal should be called after a successful login to start the renewal process
 	// This method may have many different types of implementation, from just a noop to spinning up a separate go routine
-	// StartRenewal(ctx context.Context, client *vault.Client, secret *vault.Secret) error
+	StartRenewal(ctx context.Context, client *vault.Client, secret *vault.Secret) error
 }
 
 var _ ClientAuth = &StaticTokenAuth{}
@@ -80,9 +80,10 @@ func (s *StaticTokenAuth) GetToken() string {
 	return s.token
 }
 
-// func (s *StaticTokenAuth) StartRenewal(_ context.Context, client *vault.Client, _ *vault.Secret) {
-// 	// static tokens do not support renewal
-// }
+func (s *StaticTokenAuth) StartRenewal(_ context.Context, client *vault.Client, _ *vault.Secret) error {
+	// static tokens do not need renewal
+	return nil
+}
 
 // Login logs in to vault using a static token
 func (s *StaticTokenAuth) Login(ctx context.Context, _ *vault.Client) (*vault.Secret, error) {
@@ -184,9 +185,10 @@ func (r *RemoteTokenAuth) loginOnce(ctx context.Context, client *vault.Client) (
 	return loginResponse, nil
 }
 
-// func (r *RemoteTokenAuth) StartRenewal(ctx context.Context, client *vault.Client, secret *vault.Secret) {
-// 	// todo - implement renewal
-// }
+func (r *RemoteTokenAuth) StartRenewal(ctx context.Context, client *vault.Client, secret *vault.Secret) error {
+	// todo - implement renewal
+	return nil
+}
 
 func newAwsAuthMethod(aws *v1.Settings_VaultAwsAuth) (*awsauth.AWSAuth, error) {
 	// The AccessKeyID and SecretAccessKey are not required in the case of using temporary credentials from assumed roles with AWS STS or IRSA.
