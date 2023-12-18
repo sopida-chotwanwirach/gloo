@@ -124,7 +124,7 @@ var _ = Describe("ClientAuth", func() {
 				internalAuthMethod := mocks.NewMockAuthMethod(ctrl)
 				internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).Return(nil, eris.New("mocked error message")).AnyTimes()
 
-				clientAuth = vault.NewRemoteTokenAuth(internalAuthMethod, retry.Attempts(3))
+				clientAuth = vault.NewRemoteTokenAuth(internalAuthMethod, &v1.Settings_VaultAwsAuth{}, retry.Attempts(3))
 			})
 
 			It("should return the error", func() {
@@ -147,7 +147,7 @@ var _ = Describe("ClientAuth", func() {
 					},
 				}, nil).Times(1)
 
-				clientAuth = vault.NewRemoteTokenAuth(internalAuthMethod, retry.Attempts(5))
+				clientAuth = vault.NewRemoteTokenAuth(internalAuthMethod, &v1.Settings_VaultAwsAuth{}, retry.Attempts(5))
 			})
 
 			It("should return a client", func() {
@@ -173,7 +173,7 @@ var _ = Describe("ClientAuth", func() {
 			// The auth method will return an error twice, and then a success
 			// but we plan on cancelling the context before the success
 			internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).Return(nil, eris.New("error")).AnyTimes()
-			clientAuth = vault.NewRemoteTokenAuth(internalAuthMethod, retry.Attempts(retryAttempts))
+			clientAuth = vault.NewRemoteTokenAuth(internalAuthMethod, &v1.Settings_VaultAwsAuth{}, retry.Attempts(retryAttempts))
 		})
 
 		It("should return a context error", func() {
