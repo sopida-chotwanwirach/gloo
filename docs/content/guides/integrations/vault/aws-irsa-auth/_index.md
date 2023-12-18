@@ -15,7 +15,7 @@ Start by creating the necessary permissions in AWS.
 
 ### Step 1: Create a cluster with OIDC
 
-To configure IRSA, create or use an EKS cluster with an associated OpenID Provider (OIDC). For setup instructions, follow [Creating an IAM OIDC provider for your cluster](https://docs.aws.amazon.com/eks/latest/userguide/enable-iam-roles-for-service-accounts.html) in the AWS docs.
+To configure IRSA, create or use an EKS cluster with an associated OpenID Provider (OIDC). For setup instructions, follow [Creating an IAM OIDC provider for your cluster](https://docs.aws.amazon.com/eks/latest/userguide/enable-iam-roles-for-service-accounts.html) in the AWS docs. Only the first page of the linked guide is neccessary.
 
 Next, export the following environment variables to use throughout your configuration.
 
@@ -115,11 +115,20 @@ aws iam attach-role-policy --role-name $VAULT_AUTH_ROLE_NAME --policy-arn=${VAUL
 
 ## Vault
 
-After you set up your AWS resources, you can configure Vault with AWS authentication.
+After you set up your AWS resources, you can configure Vault with AWS authentication. This guide has only been verfied with Vault installed in the same EKS cluster we created in the [AWS section](#aws).
 
 ### Step 1: Set up Vault
 
 Install Vault by choosing one of the installation methods in Vault's [Installing Vault](https://developer.hashicorp.com/vault/docs/install) documentation.
+
+This is a basic approach that may work for you. Note that is uses dev mode and is intended for use with this guide only:
+
+```shell
+helm repo add hashicorp https://helm.releases.hashicorp.com
+helm repo update
+
+helm install vault hashicorp/vault --set "server.dev.enabled=true" --namespace vault --create-namespace
+```
 
 ### Step 2: Enable AWS authentication on Vault
 
@@ -182,40 +191,45 @@ vault write auth/aws/role/dev-role-iam \
     max_ttl=24h
 ```
 
+If this fails see [Access denied due to identity-based policies – implicit denial](#access-denied-due-to-identity-based-policies--implicit-denial)
+
+
 ## Gloo Edge
 
-Lastly, install Gloo Edge by using a configuration that allows Vault and IRSA credential fetching.
+Lastly, install Gloo Edge by using a configuration that allows Vault and IRSA credential fetching. This guide has only been verfied with Vault installed in the same EKS cluster we created in the [AWS section](#aws).
 
 ### Step 1: Prepare Helm overrides
 
 Override the default settings to use Vault as a source for managing secrets. To allow for IRSA, add the `eks.amazonaws.com/role-arn` annotations, which reference the roles to assume, to the `gloo` and `discovery` service accounts.
 
-Note that you must adjust both the `pathPrefix` and `rootKey` options when you use a custom `kv` secrets engine.
+Note that you must adjust the `pathPrefix` options when you use a custom `kv` secrets engine. The value of `root_key` is `gloo` by default and is the correct value for this example. Update `VAULT_ADDRESS` if appropriate.
 
 ```shell
+export VAULT_ADDRESS=http://vault-internal.vault:8200
 cat <<EOF > helm-overrides.yaml
 settings:
-	secretOptions:
-		sources:
-		- vault:
-			# set to address for the Vault instance
-			address: http://vault-internal.vault:8200
-			aws:
-				iamServerIdHeader: ${IAM_SERVER_ID_HEADER_VALUE}
-				mountPath: aws
-				region: ${AWS_REGION}
-			# assumes kv store is mounted on 'dev'
-			pathPrefix: dev
-			# root key by default is 'gloo'.
-			rootKey: gloo
+  kubeResourceOverride:
+    spec:
+      secretOptions:
+        sources:
+          - vault:
+              # set to address for the Vault instance
+              address: ${VAULT_ADDRESS}
+              aws:
+                iamServerIdHeader: ${IAM_SERVER_ID_HEADER_VALUE}
+                mountPath: aws
+                region:  ${AWS_REGION}
+              # assumes kv store is mounted on 'dev'
+              pathPrefix: dev
+          - kubernetes: {}
 gloo:
-	serviceAccount:
-		extraAnnotations: 
-			eks.amazonaws.com/role-arn: ${VAULT_AUTH_ROLE_ARN}
+  serviceAccount:
+    extraAnnotations: 
+      eks.amazonaws.com/role-arn: ${VAULT_AUTH_ROLE_ARN}
 discovery:
-	serviceAccount:
-		extraAnnotations:
-			eks.amazonaws.com/role-arn: ${VAULT_AUTH_ROLE_ARN}
+  serviceAccount:
+    extraAnnotations:
+      eks.amazonaws.com/role-arn: ${VAULT_AUTH_ROLE_ARN}
 EOF
 ```
 
@@ -226,7 +240,7 @@ If you use Gloo Edge Enterprise, nest these Helm settings within the `gloo` sect
 ### Step 2: Install Gloo using Helm
 
 ```shell
-export EDGE_VERSION=v1.15.2
+export EDGE_VERSION=v1.15.3
 
 helm repo add gloo https://storage.googleapis.com/solo-public-helm
 helm repo update
