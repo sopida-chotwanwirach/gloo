@@ -59,7 +59,7 @@ func ClientAuthFactory(vaultSettings *v1.Settings_VaultSecrets) (ClientAuth, err
 			return nil, err
 		}
 
-		return NewRemoteTokenAuth(awsAuth), nil
+		return NewRemoteTokenAuth(awsAuth, authMethod.Aws), nil
 
 	default:
 		// AuthMethod is the preferred API to define the policy for authenticating to vault
@@ -108,7 +108,7 @@ func (s *StaticTokenAuth) Login(ctx context.Context, _ *vault.Client) (*vault.Se
 }
 
 // NewRemoteTokenAuth is a constructor for RemoteTokenAuth
-func NewRemoteTokenAuth(authMethod vault.AuthMethod, retryOptions ...retry.Option) ClientAuth {
+func NewRemoteTokenAuth(authMethod vault.AuthMethod, aws *v1.Settings_VaultAwsAuth, retryOptions ...retry.Option) ClientAuth {
 
 	// Standard retry options, which can be overridden by the loginRetryOptions parameter
 	defaultRetryOptions := []retry.Option{
@@ -123,12 +123,14 @@ func NewRemoteTokenAuth(authMethod vault.AuthMethod, retryOptions ...retry.Optio
 	return &RemoteTokenAuth{
 		authMethod:        authMethod,
 		loginRetryOptions: loginRetryOptions,
+		leaseIncrement:    int(aws.GetLeaseIncrement()),
 	}
 }
 
 type RemoteTokenAuth struct {
 	authMethod        vault.AuthMethod
 	loginRetryOptions []retry.Option
+	leaseIncrement    int
 }
 
 // Login logs into vault using the provided authMethod
@@ -190,7 +192,7 @@ func (r *RemoteTokenAuth) loginOnce(ctx context.Context, client *vault.Client) (
 }
 
 func (r *RemoteTokenAuth) StartRenewal(ctx context.Context, client *vault.Client, secret *vault.Secret) error {
-	go r.renewToken(ctx, client, secret, 600)
+	go r.renewToken(ctx, client, secret)
 	return nil
 }
 
@@ -244,7 +246,7 @@ func newAwsAuthMethod(aws *v1.Settings_VaultAwsAuth) (*awsauth.AWSAuth, error) {
 
 // Once you've set the token for your Vault client, you will need to periodically renew its lease.
 // taken from https://github.com/hashicorp/vault-examples/blob/main/examples/token-renewal/go/example.go
-func (r *RemoteTokenAuth) renewToken(ctx context.Context, client *vault.Client, secret *vault.Secret, watcherIncrement int) {
+func (r *RemoteTokenAuth) renewToken(ctx context.Context, client *vault.Client, secret *vault.Secret) {
 	contextutils.LoggerFrom(ctx).Debugf("Starting renewToken goroutine")
 	for {
 		secret, err := r.Login(ctx, client) //vi.loginWithRetry(ctx, client, awsAuth, nil)
@@ -259,7 +261,7 @@ func (r *RemoteTokenAuth) renewToken(ctx context.Context, client *vault.Client, 
 			}
 		}
 
-		retry, tokenErr := r.manageTokenLifecycle(ctx, client, secret, watcherIncrement)
+		retry, tokenErr := r.manageTokenLifecycle(ctx, client, secret, r.leaseIncrement)
 
 		// The only error this function can return is if the vaultLoginResp is nil, and we have checked against that in loginWithRetry, which
 		// is currently the only called.
