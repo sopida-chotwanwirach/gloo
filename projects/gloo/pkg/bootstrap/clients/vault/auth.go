@@ -248,8 +248,16 @@ func newAwsAuthMethod(aws *v1.Settings_VaultAwsAuth) (*awsauth.AWSAuth, error) {
 // taken from https://github.com/hashicorp/vault-examples/blob/main/examples/token-renewal/go/example.go
 func (r *RemoteTokenAuth) renewToken(ctx context.Context, client *vault.Client, secret *vault.Secret) {
 	contextutils.LoggerFrom(ctx).Debugf("Starting renewToken goroutine")
+
+	// On the first time through we have just logged in, so we don't need to do it again. Every other time we need to log in again.
+	haveValidSecret := true
 	for {
-		secret, err := r.Login(ctx, client) //vi.loginWithRetry(ctx, client, awsAuth, nil)
+		var err error
+		if !haveValidSecret {
+			secret, err = r.Login(ctx, client) //vi.loginWithRetry(ctx, client, awsAuth, nil)
+		} else {
+			haveValidSecret = false
+		}
 		// The only errors we should ever hit are context errors because we are retrying on all other errors
 		if err != nil {
 			if ctx.Err() != nil {

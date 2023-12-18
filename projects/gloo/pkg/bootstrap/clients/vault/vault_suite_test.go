@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/solo-io/gloo/test/gomega/assertions"
+	"github.com/solo-io/gloo/test/helpers"
 	"go.opencensus.io/stats/view"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -12,6 +13,9 @@ import (
 )
 
 func TestVaultClient(t *testing.T) {
+	leakDetector := helpers.DeferredGoroutineLeakDetector(t)
+	defer leakDetector()
+
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Vault Client Suite")
 }
