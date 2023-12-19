@@ -25,8 +25,9 @@ var _ = Describe("ClientAuth", func() {
 		ctx    context.Context
 		cancel context.CancelFunc
 
-		clientAuth ClientAuth
-		ctrl       *gomock.Controller
+		clientAuth   ClientAuth
+		ctrl         *gomock.Controller
+		tokenRenewer *mocks.MockTokenRenewer
 	)
 
 	BeforeEach(func() {
@@ -98,7 +99,7 @@ var _ = Describe("ClientAuth", func() {
 				internalAuthMethod := mocks.NewMockAuthMethod(ctrl)
 				internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).Return(nil, errMock).AnyTimes()
 
-				clientAuth = NewRemoteTokenAuth(internalAuthMethod, &v1.Settings_VaultAwsAuth{}, retry.Attempts(3))
+				clientAuth = NewRemoteTokenAuth(internalAuthMethod, &NoOpRenewal{}, &v1.Settings_VaultAwsAuth{}, retry.Attempts(3))
 			})
 
 			It("should return the error", func() {
@@ -119,7 +120,7 @@ var _ = Describe("ClientAuth", func() {
 				internalAuthMethod := mocks.NewMockAuthMethod(ctrl)
 				internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).Return(nil, nil).AnyTimes()
 
-				clientAuth = NewRemoteTokenAuth(internalAuthMethod, &v1.Settings_VaultAwsAuth{}, retry.Attempts(3))
+				clientAuth = NewRemoteTokenAuth(internalAuthMethod, &NoOpRenewal{}, &v1.Settings_VaultAwsAuth{}, retry.Attempts(3))
 			})
 
 			It("should return the error", func() {
@@ -145,7 +146,7 @@ var _ = Describe("ClientAuth", func() {
 					},
 				}, nil).Times(1)
 
-				clientAuth = NewRemoteTokenAuth(internalAuthMethod, &v1.Settings_VaultAwsAuth{}, retry.Attempts(5))
+				clientAuth = NewRemoteTokenAuth(internalAuthMethod, &NoOpRenewal{}, &v1.Settings_VaultAwsAuth{}, retry.Attempts(5))
 			})
 
 			It("should return a secret", func() {
@@ -169,7 +170,7 @@ var _ = Describe("ClientAuth", func() {
 				// The auth method will return an error twice, and then a success
 				// but we plan on cancelling the context before the success
 				internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).Return(nil, eris.New("error")).AnyTimes()
-				clientAuth = NewRemoteTokenAuth(internalAuthMethod, &v1.Settings_VaultAwsAuth{}, retry.Attempts(retryAttempts))
+				clientAuth = NewRemoteTokenAuth(internalAuthMethod, &NoOpRenewal{}, &v1.Settings_VaultAwsAuth{}, retry.Attempts(retryAttempts))
 			})
 
 			It("should return a context error", func() {
