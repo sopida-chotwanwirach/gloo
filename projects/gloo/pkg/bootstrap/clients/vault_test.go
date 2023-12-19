@@ -12,7 +12,8 @@ import (
 	"github.com/rotisserie/eris"
 	v1 "github.com/solo-io/gloo/projects/gloo/pkg/api/v1"
 	"github.com/solo-io/gloo/projects/gloo/pkg/bootstrap/clients/vault"
-	"github.com/solo-io/gloo/projects/gloo/pkg/bootstrap/clients/vault/mocks"
+
+	"github.com/solo-io/gloo/mocks"
 	"github.com/solo-io/gloo/test/gomega/assertions"
 	"go.opencensus.io/stats/view"
 
@@ -74,11 +75,6 @@ var _ = Describe("ClientAuth", func() {
 				assertions.ExpectStatSumMatches(vault.MLoginFailures, Equal(1))
 			})
 
-			// It("startRenewal should return nil", func() {
-			// 	err := clientAuth.StartRenewal(ctx, nil)
-			// 	Expect(err).NotTo(HaveOccurred())
-			// })
-
 		})
 
 		When("token is not empty", func() {
@@ -104,11 +100,6 @@ var _ = Describe("ClientAuth", func() {
 				assertions.ExpectStatLastValueMatches(vault.MLastLoginSuccess, Not(BeZero()))
 				assertions.ExpectStatSumMatches(vault.MLoginSuccesses, Equal(1))
 			})
-
-			// It("startRenewal should return nil", func() {
-			// 	err := clientAuth.StartRenewal(ctx, nil)
-			// 	Expect(err).NotTo(HaveOccurred())
-			// })
 
 		})
 
