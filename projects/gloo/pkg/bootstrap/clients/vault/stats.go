@@ -11,6 +11,10 @@ func init() {
 		MLastLoginFailureView,
 		MLoginSuccessesView,
 		MLoginFailuresView,
+		MLastRenewSuccessView,
+		MLastRenewFailureView,
+		MRenewSuccessesView,
+		MRenewFailuresView,
 	)
 }
 

@@ -17,15 +17,15 @@ func NewAuthenticatedClient(ctx context.Context, vaultSettings *v1.Settings_Vaul
 		return nil, err
 	}
 
-	_, err = AuthenticateClient(ctx, client, clientAuth)
+	secret, err := AuthenticateClient(ctx, client, clientAuth)
 	if err != nil {
 		return nil, err
 	}
 
-	// err = clientAuth.StartRenewal(ctx, client, secret)
-	// if err != nil {
-	// 	return nil, err
-	// }
+	err = clientAuth.StartRenewal(ctx, client, secret)
+	if err != nil {
+		return nil, err
+	}
 
 	return client, nil
 }

@@ -25,9 +25,8 @@ var _ = Describe("ClientAuth", func() {
 		ctx    context.Context
 		cancel context.CancelFunc
 
-		clientAuth   ClientAuth
-		ctrl         *gomock.Controller
-		tokenRenewer *mocks.MockTokenRenewer
+		clientAuth ClientAuth
+		ctrl       *gomock.Controller
 	)
 
 	BeforeEach(func() {

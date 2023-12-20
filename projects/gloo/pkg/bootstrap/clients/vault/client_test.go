@@ -12,6 +12,7 @@ import (
 	"github.com/rotisserie/eris"
 	v1 "github.com/solo-io/gloo/projects/gloo/pkg/api/v1"
 	. "github.com/solo-io/gloo/projects/gloo/pkg/bootstrap/clients/vault"
+	mock_vault "github.com/solo-io/gloo/projects/gloo/pkg/bootstrap/clients/vault/mocks"
 
 	"github.com/solo-io/gloo/mocks"
 	"github.com/solo-io/gloo/test/gomega/assertions"
@@ -32,6 +33,8 @@ var _ = Describe("ClientAuth", func() {
 
 		clientAuth ClientAuth
 		ctrl       *gomock.Controller
+
+		mockTokenRenewer *mock_vault.MockTokenRenewer
 		//secret     *vaultapi.Secret
 	)
 
@@ -134,34 +137,54 @@ var _ = Describe("ClientAuth", func() {
 				internalAuthMethod := mocks.NewMockAuthMethod(ctrl)
 				internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).Return(nil, eris.New("mocked error message")).AnyTimes()
 
-				clientAuth = NewRemoteTokenAuth(internalAuthMethod, &NoOpRenewal{}, &v1.Settings_VaultAwsAuth{}, retry.Attempts(3))
+				mockTokenRenewer = mock_vault.NewMockTokenRenewer(ctrl)
+				mockTokenRenewer.EXPECT().StartRenewal(ctx, nil, nil).Return(nil).Times(0)
+
+				clientAuth = NewRemoteTokenAuth(internalAuthMethod, mockTokenRenewer, &v1.Settings_VaultAwsAuth{}, retry.Attempts(3))
 			})
 
 			It("should return the error", func() {
 				secret, err := NewAuthenticatedClient(ctx, nil, clientAuth)
 				Expect(err).To(MatchError("unable to log in to auth method: unable to authenticate to vault: mocked error message"))
 				Expect(secret).To(BeNil())
+
+				assertions.ExpectStatLastValueMatches(MLastLoginFailure, Not(BeZero()))
+				assertions.ExpectStatLastValueMatches(MLastLoginSuccess, BeZero())
+				assertions.ExpectStatSumMatches(MLoginFailures, Equal(3))
+				assertions.ExpectStatSumMatches(MLoginSuccesses, Equal(0))
 			})
 
 		})
 
 		When("internal auth method returns an error, and then a success", func() {
+			var (
+				client *vaultapi.Client
+				err    error
+			)
 
 			BeforeEach(func() {
-				ctrl = gomock.NewController(GinkgoT())
-				internalAuthMethod := mocks.NewMockAuthMethod(ctrl)
-				internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).Return(nil, eris.New("error")).Times(1)
-				internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).Return(&vaultapi.Secret{
+				client = nil
+				err = nil
+
+				secret := &vaultapi.Secret{
 					Auth: &vaultapi.SecretAuth{
 						ClientToken: "a-client-token",
 					},
-				}, nil).Times(1)
+				}
 
-				clientAuth = NewRemoteTokenAuth(internalAuthMethod, &NoOpRenewal{}, &v1.Settings_VaultAwsAuth{}, retry.Attempts(5))
+				ctrl = gomock.NewController(GinkgoT())
+				internalAuthMethod := mocks.NewMockAuthMethod(ctrl)
+				internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).Return(nil, eris.New("error")).Times(1)
+				internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).Return(secret, nil).Times(1)
+
+				mockTokenRenewer = mock_vault.NewMockTokenRenewer(ctrl)
+				mockTokenRenewer.EXPECT().StartRenewal(ctx, nil, secret).Return(nil).Times(1)
+
+				clientAuth = NewRemoteTokenAuth(internalAuthMethod, mockTokenRenewer, &v1.Settings_VaultAwsAuth{}, retry.Attempts(5))
 			})
 
 			It("should return a client", func() {
-				client, err := NewAuthenticatedClient(ctx, nil, clientAuth)
+				client, err = NewAuthenticatedClient(ctx, nil, clientAuth)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(client).ToNot((BeNil()))
 
