@@ -3,7 +3,7 @@ package translator
 import (
 	"context"
 
-	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins/registry"
+	"github.com/solo-io/gloo/projects/gateway2/translator/extensions/routeregistry"
 
 	"github.com/solo-io/gloo/projects/gateway2/query"
 	"github.com/solo-io/gloo/projects/gateway2/reports"
@@ -27,14 +27,16 @@ type K8sGwTranslator interface {
 	) *v1.Proxy
 }
 
-func NewTranslator(plugins registry.HTTPFilterPluginRegistry) K8sGwTranslator {
+func NewTranslator(
+	routePlugins routeregistry.RoutePluginRegistry,
+) K8sGwTranslator {
 	return &translator{
-		plugins,
+		routePlugins,
 	}
 }
 
 type translator struct {
-	plugins registry.HTTPFilterPluginRegistry
+	routePlugins routeregistry.RoutePluginRegistry
 }
 
 func (t *translator) TranslateProxy(
@@ -73,7 +75,7 @@ func (t *translator) TranslateProxy(
 	listeners := listener.TranslateListeners(
 		ctx,
 		queries,
-		t.plugins,
+		t.routePlugins,
 		gateway,
 		routesForGw,
 		reporter,

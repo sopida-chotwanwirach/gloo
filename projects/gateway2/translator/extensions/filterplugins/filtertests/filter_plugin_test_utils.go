@@ -4,10 +4,11 @@ import (
 	"context"
 	"log"
 
-	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins"
 	"google.golang.org/protobuf/proto"
 
 	. "github.com/onsi/gomega"
+	"github.com/solo-io/gloo/projects/gateway2/translator/extensions"
+	"github.com/solo-io/gloo/projects/gateway2/translator/extensions/filterplugins/api"
 	"github.com/solo-io/gloo/projects/gateway2/translator/testutils"
 
 	v1 "github.com/solo-io/gloo/projects/gloo/pkg/api/v1"
@@ -15,7 +16,7 @@ import (
 )
 
 func AssertExpectedRoute(
-	plugin filterplugins.FilterPlugin,
+	plugin api.HTTPFilterPlugin,
 	filter gwv1.HTTPRouteFilter,
 	expectedRoute *v1.Route,
 	logActual bool,
@@ -27,7 +28,7 @@ func AssertExpectedRoute(
 }
 
 func AssertExpectedRouteWith(
-	plugin filterplugins.FilterPlugin,
+	plugin api.HTTPFilterPlugin,
 	filter gwv1.HTTPRouteFilter,
 	outputRoute *v1.Route,
 	expectedRoute *v1.Route,
@@ -38,23 +39,22 @@ func AssertExpectedRouteWith(
 }
 
 func assertExpectedRoute(
-	plugin filterplugins.FilterPlugin,
+	plugin api.HTTPFilterPlugin,
 	filter gwv1.HTTPRouteFilter,
 	outputRoute *v1.Route,
 	expectedRoute *v1.Route,
 	match *gwv1.HTTPRouteMatch,
 	logActual bool,
 ) {
-	ctx := &filterplugins.RouteContext{
-		Ctx:      context.TODO(),
+	rtCtx := &extensions.RouteContext{
 		Route:    &gwv1.HTTPRoute{},
-		Queries:  nil,
 		Rule:     nil,
 		Reporter: nil,
 		Match:    match,
 	}
 	err := plugin.ApplyFilter(
-		ctx,
+		context.Background(),
+		rtCtx,
 		filter,
 		outputRoute,
 	)

@@ -1,8 +1,10 @@
 package urlrewrite
 
 import (
+	"context"
+
 	errors "github.com/rotisserie/eris"
-	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins"
+	"github.com/solo-io/gloo/projects/gateway2/translator/extensions"
 	matcherv3 "github.com/solo-io/gloo/projects/gloo/pkg/api/external/envoy/type/matcher/v3"
 	v1 "github.com/solo-io/gloo/projects/gloo/pkg/api/v1"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -17,7 +19,8 @@ func NewPlugin() *Plugin {
 }
 
 func (p *Plugin) ApplyFilter(
-	ctx *filterplugins.RouteContext,
+	ctx context.Context,
+	routeCtx *extensions.RouteContext,
 	filter gwv1.HTTPRouteFilter,
 	outputRoute *v1.Route,
 ) error {
@@ -52,10 +55,10 @@ func (p *Plugin) ApplyFilter(
 			// An empty replace string does not seem to solve the issue so we are using
 			// a regex match and replace instead
 			// Remove this workaround once https://github.com/envoyproxy/envoy/issues/26055 is fixed
-			if ctx.Match.Path != nil && ctx.Match.Path.Value != nil && *config.Path.ReplacePrefixMatch == "/" {
+			if routeCtx.Match.Path != nil && routeCtx.Match.Path.Value != nil && *config.Path.ReplacePrefixMatch == "/" {
 				outputRoute.Options.RegexRewrite = &matcherv3.RegexMatchAndSubstitute{
 					Pattern: &matcherv3.RegexMatcher{
-						Regex: "^" + *ctx.Match.Path.Value + `\/*`,
+						Regex: "^" + *routeCtx.Match.Path.Value + `\/*`,
 					},
 					Substitution: "/",
 				}

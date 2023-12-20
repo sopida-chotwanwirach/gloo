@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	"github.com/onsi/gomega"
-	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins"
-	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins/mirror"
-	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins/mirror/mocks"
+	"github.com/solo-io/gloo/projects/gateway2/translator/extensions"
+	"github.com/solo-io/gloo/projects/gateway2/translator/extensions/filterplugins/mirror"
+	"github.com/solo-io/gloo/projects/gateway2/translator/extensions/filterplugins/mirror/mocks"
 	v1 "github.com/solo-io/gloo/projects/gloo/pkg/api/v1"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
@@ -22,10 +22,8 @@ func TestSingleMirror(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	queries := mocks.NewMockGatewayQueries(ctrl)
 	rt := &gwv1.HTTPRoute{}
-	ctx := &filterplugins.RouteContext{
-		Ctx:     context.Background(),
-		Queries: queries,
-		Route:   rt,
+	routeCtx := &extensions.RouteContext{
+		Route: rt,
 	}
 	filter := gwv1.HTTPRouteFilter{
 		Type: gwv1.HTTPRouteFilterRequestMirror,
@@ -43,13 +41,13 @@ func TestSingleMirror(t *testing.T) {
 		},
 	}
 	queries.EXPECT().ObjToFrom(rt).Return(nil)
-	queries.EXPECT().GetBackendForRef(ctx.Ctx, gomock.Any(), &filter.RequestMirror.BackendRef).Return(svc, nil)
-	plugin := mirror.NewPlugin()
+	queries.EXPECT().GetBackendForRef(context.Background(), gomock.Any(), &filter.RequestMirror.BackendRef).Return(svc, nil)
+	plugin := mirror.NewPlugin(queries)
 	outputRoute := &v1.Route{
 		Action:  &v1.Route_RouteAction{},
 		Options: &v1.RouteOptions{},
 	}
-	plugin.ApplyFilter(ctx, filter, outputRoute)
+	plugin.ApplyFilter(context.Background(), routeCtx, filter, outputRoute)
 
 	shadowing := outputRoute.GetOptions().GetShadowing()
 	g.Expect(shadowing).ToNot(gomega.BeNil())

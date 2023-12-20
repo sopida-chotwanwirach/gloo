@@ -9,7 +9,7 @@ import (
 	"github.com/solo-io/gloo/projects/gateway2/reports"
 	. "github.com/solo-io/gloo/projects/gateway2/translator"
 	"github.com/solo-io/gloo/projects/gateway2/translator/extensions"
-	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins/registry"
+	"github.com/solo-io/gloo/projects/gateway2/translator/extensions/routeregistry"
 	"github.com/solo-io/gloo/projects/gateway2/translator/testutils"
 	v1 "github.com/solo-io/gloo/projects/gloo/pkg/api/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -76,9 +76,9 @@ func (tc TestCase) Run(ctx context.Context) (map[types.NamespacedName]bool, erro
 		}
 		reportsMap := reports.NewReportMap()
 		reporter := reports.NewReporter(&reportsMap)
-		plugins := registry.NewHTTPFilterPluginRegistry(queries, extensions.NewExtensionPluginRegistry())
+		routePlugins := routeregistry.NewRoutePluginRegistry(queries, extensions.NewExtensionPluginRegistry())
 		// translate gateway
-		proxy := NewTranslator(plugins).TranslateProxy(
+		proxy := NewTranslator(*routePlugins).TranslateProxy(
 			ctx,
 			gw,
 			queries,
