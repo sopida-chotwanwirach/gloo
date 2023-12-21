@@ -85,14 +85,13 @@ func translateGatewayHTTPRouteRule(
 			Reporter: reporter,
 		}
 		for _, plugin := range routePlugins.GetRoutePlugins() {
-			err := plugin.ApplyPlugin(ctx, rtCtx, queries, outputRoute)
+			err := plugin.ApplyPlugin(ctx, rtCtx, outputRoute)
 			if err != nil {
-				// do something
+				// TODO Log
 			}
 		}
 
 		if outputRoute.Action == nil {
-			// TODO: maybe? report error; maybe move this to setRouteAction()
 			outputRoute.Action = &v1.Route_DirectResponseAction{
 				DirectResponseAction: &v1.DirectResponseAction{
 					Status: http.StatusInternalServerError,
