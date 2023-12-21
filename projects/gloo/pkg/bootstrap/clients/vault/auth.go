@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	errors "github.com/rotisserie/eris"
@@ -192,6 +193,7 @@ func (r *RemoteTokenAuth) loginOnce(ctx context.Context, client *vault.Client) (
 		return nil, ErrNoAuthInfo
 	}
 
+	fmt.Println("successfully authenticated to vault")
 	contextutils.LoggerFrom(ctx).Debugf("successfully authenticated to vault %v", loginResponse)
 	utils.Measure(ctx, MLastLoginSuccess, time.Now().Unix())
 	utils.MeasureOne(ctx, MLoginSuccesses)
