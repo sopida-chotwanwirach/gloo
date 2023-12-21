@@ -116,6 +116,7 @@ var vaultGetWatcher = func(client *vault.Client, secret *vault.Secret, watcherIn
 // otherwise returns nil so we can attempt login again.
 // based on https://github.com/hashicorp/vault-examples/blob/main/examples/token-renewal/go/example.go
 func (r *VaultTokenRenewer) manageTokenLifecycle(ctx context.Context, client *vault.Client, secret *vault.Secret, watcherIncrement int) (bool, error) {
+
 	// Make sure the token is renewable
 	if renewable, err := secret.TokenIsRenewable(); !renewable || err != nil {
 		// If the token is not renewable and we immediately try to renew it, we will just keep trying and hitting the same error
@@ -136,7 +137,6 @@ func (r *VaultTokenRenewer) manageTokenLifecycle(ctx context.Context, client *va
 		return retryLogin, nil
 	}
 
-	contextutils.LoggerFrom(ctx).Error("Token is renewable.")
 	watcher, err := r.getWatcher(client, secret, watcherIncrement)
 
 	// The only errors the constructor can return are if the input parameter is nil or if the secret is nil, and we

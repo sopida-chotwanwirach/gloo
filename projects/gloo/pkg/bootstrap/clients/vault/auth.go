@@ -60,6 +60,7 @@ func ClientAuthFactory(vaultSettings *v1.Settings_VaultSecrets) (ClientAuth, err
 		tokenRenewer := &VaultTokenRenewer{
 			auth:           awsAuth,
 			leaseIncrement: int(authMethod.Aws.GetLeaseIncrement()),
+			getWatcher:     vaultGetWatcher,
 		}
 		return NewRemoteTokenAuth(awsAuth, tokenRenewer, authMethod.Aws), nil
 

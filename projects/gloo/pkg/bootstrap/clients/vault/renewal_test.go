@@ -2,7 +2,6 @@ package vault_test
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/avast/retry-go"
@@ -140,11 +139,9 @@ var _ = Describe("Vault Token Renewal", func() {
 			internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).AnyTimes().DoAndReturn(func(_ context.Context, _ *vault.Client) (*vault.Secret, error) {
 				loginCount += 1
 				if loginCount%2 == 0 {
-					fmt.Println("returning login success")
 					return secret, nil
 				}
 
-				fmt.Println("returning login faliure")
 				return nil, errMock
 
 			})
