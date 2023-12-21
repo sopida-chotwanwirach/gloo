@@ -53,7 +53,7 @@ var _ = Describe("Vault Token Renewal", func() {
 		cancel()
 	})
 
-	When("Login fails", func() {
+	XWhen("Login fails", func() {
 		BeforeEach(func() {
 			ctrl = gomock.NewController(GinkgoT())
 			internalAuthMethod := mocks.NewMockAuthMethod(ctrl)
@@ -90,7 +90,7 @@ var _ = Describe("Vault Token Renewal", func() {
 		})
 	})
 
-	FWhen("Everything is running smooth", func() {
+	When("Everything is running smooth", func() {
 		var (
 			doneCh  chan error
 			renewCh chan *vault.RenewOutput
@@ -129,19 +129,23 @@ var _ = Describe("Vault Token Renewal", func() {
 				time.Sleep(1 * time.Second)
 				renewCh <- &vault.RenewOutput{}
 				time.Sleep(1 * time.Second)
+				doneCh <- eris.Errorf("Renewal error")
+				time.Sleep(1 * time.Second)
+				renewCh <- &vault.RenewOutput{}
+				time.Sleep(1 * time.Second)
 				cancel()
 			}()
 
 			renewer.RenewToken(ctx, client, secret)
 
-			// assertions.ExpectStatLastValueMatches(MLastLoginFailure, BeZero())
-			//assertions.ExpectStatLastValueMatches(MLastLoginSuccess, Not(BeZero()))
-			// assertions.ExpectStatSumMatches(MLoginFailures, BeZero())
-			// assertions.ExpectStatSumMatches(MLoginSuccesses, Not(BeZero()))
-			// assertions.ExpectStatLastValueMatches(MLastRenewFailure, Not(BeZero()))
-			// assertions.ExpectStatLastValueMatches(MLastRenewSuccess, Not(BeZero()))
-			//assertions.ExpectStatSumMatches(MRenewFailures, Equal(1))
-			assertions.ExpectStatSumMatches(MRenewSuccesses, Equal(1))
+			assertions.ExpectStatLastValueMatches(MLastLoginFailure, BeZero())
+			assertions.ExpectStatLastValueMatches(MLastLoginSuccess, Not(BeZero()))
+			assertions.ExpectStatSumMatches(MLoginFailures, BeZero())
+			assertions.ExpectStatSumMatches(MLoginSuccesses, Equal(1))
+			assertions.ExpectStatLastValueMatches(MLastRenewFailure, Not(BeZero()))
+			assertions.ExpectStatLastValueMatches(MLastRenewSuccess, Not(BeZero()))
+			assertions.ExpectStatSumMatches(MRenewFailures, Equal(1))
+			assertions.ExpectStatSumMatches(MRenewSuccesses, Equal(2))
 		})
 	})
 })

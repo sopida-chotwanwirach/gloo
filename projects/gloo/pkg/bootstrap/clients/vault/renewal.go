@@ -2,7 +2,6 @@ package vault
 
 import (
 	"context"
-	"fmt"
 	"math/rand"
 	"time"
 
@@ -155,7 +154,6 @@ func (r *VaultTokenRenewer) manageTokenLifecycle(ctx context.Context, client *va
 		// extending it or renewing is disabled. In any case, the caller
 		// needs to attempt to log in again.
 		case err := <-watcher.DoneCh():
-			fmt.Println("donech")
 			utils.Measure(ctx, MLastRenewFailure, time.Now().Unix())
 			utils.MeasureOne(ctx, MRenewFailures)
 			if err != nil {
