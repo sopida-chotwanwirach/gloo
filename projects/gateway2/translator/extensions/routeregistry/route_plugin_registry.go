@@ -17,7 +17,6 @@ func (h *RoutePluginRegistry) GetRoutePlugins() []extensions.RoutePlugin {
 
 func NewRoutePluginRegistry(
 	queries query.GatewayQueries,
-	extRegistry *extensions.ExtensionPluginRegistry,
 ) *RoutePluginRegistry {
 	filter := filterplugins.NewRouteFilterPlugin(*registry.NewHTTPFilterPluginRegistry(queries))
 	return &RoutePluginRegistry{
