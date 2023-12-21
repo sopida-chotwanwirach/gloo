@@ -18,7 +18,6 @@ import (
 	gatewayv1 "github.com/solo-io/gloo/projects/gateway/pkg/api/v1"
 	gatewayv1kube "github.com/solo-io/gloo/projects/gateway/pkg/api/v1/kube/client/clientset/versioned/typed/gateway.solo.io/v1"
 	"github.com/solo-io/gloo/projects/gloo/cli/pkg/cmd/gateway"
-	"github.com/solo-io/gloo/projects/gloo/cli/pkg/cmd/options"
 	"github.com/solo-io/gloo/projects/gloo/cli/pkg/cmd/version"
 	"github.com/solo-io/gloo/projects/gloo/cli/pkg/helpers"
 	"github.com/solo-io/gloo/projects/gloo/pkg/api/v1/options/grpc_json"
@@ -29,7 +28,6 @@ import (
 	"github.com/solo-io/k8s-utils/testutils/helper"
 	"github.com/solo-io/skv2/codegen/util"
 	"github.com/solo-io/solo-kit/pkg/api/v1/clients"
-	"github.com/solo-io/solo-kit/pkg/api/v1/resources/core"
 	"github.com/solo-io/solo-kit/pkg/code-generator/schemagen"
 	admission_v1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -129,7 +127,7 @@ var _ = Describe("Kube2e: helm", func() {
 			By("should start with the settings.invalidConfigPolicy.invalidRouteResponseCode=404")
 			client := helpers.MustSettingsClient(ctx)
 			settings, err := client.Read(testHelper.InstallNamespace, defaults.SettingsName, clients.ReadOpts{})
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			Expect(settings.GetGloo().GetInvalidConfigPolicy().GetInvalidRouteResponseCode()).To(Equal(uint32(404)))
 			Expect(settings.GetGateway().GetValidation().GetValidationServerGrpcMaxSizeBytes().GetValue()).To(Equal(int32(4000000)))
 
@@ -144,7 +142,7 @@ var _ = Describe("Kube2e: helm", func() {
 
 			By("should have updated to settings.invalidConfigPolicy.invalidRouteResponseCode=400")
 			settings, err = client.Read(testHelper.InstallNamespace, defaults.SettingsName, clients.ReadOpts{})
-			Expect(err).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
 			Expect(settings.GetGloo().GetInvalidConfigPolicy().GetInvalidRouteResponseCode()).To(Equal(uint32(400)))
 			Expect(settings.GetGateway().GetValidation().GetValidationServerGrpcMaxSizeBytes().GetValue()).To(Equal(int32(5000000)))
 		})
@@ -592,8 +590,8 @@ var _ = Describe("Kube2e: helm", func() {
 
 func getGlooServerVersion(ctx context.Context, namespace string) (v string) {
 	glooVersion, err := version.GetClientServerVersions(ctx, version.NewKube(namespace, ""))
-	Expect(err).To(BeNil())
-	Expect(len(glooVersion.GetServer())).To(Equal(1))
+	Expect(err).NotTo(HaveOccurred())
+	Expect(glooVersion.GetServer()).To(HaveLen(1))
 	for _, container := range glooVersion.GetServer()[0].GetKubernetes().GetContainers() {
 		if v == "" {
 			v = container.Tag
@@ -774,7 +772,7 @@ func runAndCleanCommand(name string, arg ...string) []byte {
 			fmt.Println("ExitError: ", string(v.Stderr))
 		}
 	}
-	Expect(err).To(BeNil())
+	Expect(err).NotTo(HaveOccurred())
 	cmd.Process.Kill()
 	cmd.Process.Release()
 	return b
@@ -788,21 +786,7 @@ func checkGlooHealthy(testHelper *helper.SoloTestHelper) {
 }
 
 func GetEnvoyCfgDump(testHelper *helper.SoloTestHelper) string {
-	contextWithCancel, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	opts := &options.Options{
-		Metadata: core.Metadata{
-			Namespace: testHelper.InstallNamespace,
-		},
-		Top: options.Top{
-			Ctx: contextWithCancel,
-		},
-		Proxy: options.Proxy{
-			Name: "gateway-proxy",
-		},
-	}
-
-	cfg, err := gateway.GetEnvoyCfgDump(opts)
+	cfg, err := gateway.GetEnvoyAdminData(context.TODO(), "gateway-proxy", testHelper.InstallNamespace, "/config_dump", 5*time.Second)
 	Expect(err).NotTo(HaveOccurred())
 	return cfg
 }

@@ -35,6 +35,7 @@ Name|Version|License
 [onsi/gomega](https://github.com/onsi/gomega)|v1.27.10|MIT License
 [pkg/browser](https://github.com/pkg/browser)|v0.0.0-20180916011732-0a3d74bf9ce4|BSD 2-clause "Simplified" License
 [pkg/errors](https://github.com/pkg/errors)|v0.9.1|BSD 2-clause "Simplified" License
+[go-ruleguard/dsl](https://github.com/quasilyte/go-ruleguard)|v0.3.22|BSD 3-clause "New" or "Revised" License
 [rotisserie/eris](https://github.com/rotisserie/eris)|v0.4.0|MIT License
 [saiskee/gettercheck](https://github.com/saiskee/gettercheck)|v0.0.0-20210820204958-38443d06ebe0|MIT License
 [sergi/go-diff](https://github.com/sergi/go-diff)|v1.1.0|MIT License
@@ -46,7 +47,7 @@ Name|Version|License
 [go.uber.org/goleak](https://go.uber.org/goleak)|v1.2.1|MIT License
 [go.uber.org/multierr](https://go.uber.org/multierr)|v1.11.0|MIT License
 [go.uber.org/zap](https://go.uber.org/zap)|v1.25.0|MIT License
-[x/crypto](https://golang.org/x/crypto)|v0.14.0|BSD 3-clause "New" or "Revised" License
+[x/crypto](https://golang.org/x/crypto)|v0.17.0|BSD 3-clause "New" or "Revised" License
 [x/exp](https://golang.org/x/exp)|v0.0.0-20220921164117-439092de6870|BSD 3-clause "New" or "Revised" License
 [x/sync](https://golang.org/x/sync)|v0.3.0|BSD 3-clause "New" or "Revised" License
 [x/tools](https://golang.org/x/tools)|v0.10.0|BSD 3-clause "New" or "Revised" License

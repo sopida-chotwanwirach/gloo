@@ -860,7 +860,6 @@ var _ = Describe("Kube2e: gateway", func() {
 		})
 
 		It("correctly delegates options from VirtualHostOption", func() {
-
 			Eventually(func(g Gomega) {
 				// https://onsi.github.io/gomega/#category-3-making-assertions-eminem-the-function-passed-into-codeeventuallycode
 				getProxy := func() (resources.InputResource, error) {
@@ -915,7 +914,7 @@ var _ = Describe("Kube2e: gateway", func() {
 				// properly and should fail
 				helpers.EventuallyResourceAccepted(getProxy)
 
-			})
+			}, "30s", "1s").Should(Succeed())
 		})
 	})
 
@@ -1019,7 +1018,6 @@ var _ = Describe("Kube2e: gateway", func() {
 		})
 
 		It("correctly delegates options from RouteOption", func() {
-
 			Eventually(func(g Gomega) {
 				// https://onsi.github.io/gomega/#category-3-making-assertions-eminem-the-function-passed-into-codeeventuallycode
 				getProxy := func() (resources.InputResource, error) {
@@ -1075,7 +1073,8 @@ var _ = Describe("Kube2e: gateway", func() {
 				// If the Proxy has the necessary values, but the resource has been rejected, this test is not behaving
 				// properly and should fail
 				helpers.EventuallyResourceAccepted(getProxy)
-			})
+
+			}, "30s", "1s").Should(Succeed())
 		})
 	})
 
@@ -2279,7 +2278,7 @@ spec:
 							clients.ReadOpts{Ctx: ctx})
 						g.Expect(err).NotTo(HaveOccurred())
 						g.Expect(vs.GetVirtualHost().GetOptions().GetTransformations()).To(gloo_matchers.MatchProto(invalidTransformation))
-					})
+					}).Should(Succeed())
 
 				})
 			})
