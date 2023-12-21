@@ -30,11 +30,6 @@ rules:
   - endpointslices
   verbs: ["get", "list", "watch"]
 - apiGroups:
-  - "gateway.solo.io"
-  resources:
-  - routeoptions
-  verbs: ["get", "list", "watch"]
-- apiGroups:
   - "gateway.networking.k8s.io"
   resources:
   - gatewayclasses/status

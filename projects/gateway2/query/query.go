@@ -23,7 +23,6 @@ var (
 	ErrNoMatchingListenerHostname = fmt.Errorf("no matching listener hostname")
 	ErrNoMatchingParent           = fmt.Errorf("no matching parent")
 	ErrNotAllowedByListeners      = fmt.Errorf("not allowed by listeners")
-	ErrLocalObjRefMissingKind     = fmt.Errorf("localObjRef provided with empty kind")
 )
 
 type Error struct {
@@ -94,7 +93,6 @@ func (f FromObject) Namespace() string {
 	return f.GetNamespace()
 }
 
-// TODO(Law): remove this type entirely?
 type FromGkNs struct {
 	Gk metav1.GroupKind
 	Ns string
@@ -119,8 +117,6 @@ type GatewayQueries interface {
 	GetBackendForRef(ctx context.Context, obj From, backendRef *apiv1.BackendObjectReference) (client.Object, error)
 
 	GetSecretForRef(ctx context.Context, obj From, secretRef apiv1.SecretObjectReference) (client.Object, error)
-
-	GetLocalObjRef(ctx context.Context, from From, localObjRef apiv1.LocalObjectReference) (client.Object, error)
 }
 
 type RoutesForGwResult struct {
@@ -392,21 +388,6 @@ func (r *gatewayQueries) GetSecretForRef(ctx context.Context, obj From, secretRe
 	return r.getRef(ctx, obj, string(secretRef.Name), secretRef.Namespace, secretGK)
 }
 
-func (r *gatewayQueries) GetLocalObjRef(ctx context.Context, obj From, localObjRef apiv1.LocalObjectReference) (client.Object, error) {
-	refGroup := ""
-	if localObjRef.Group != "" {
-		refGroup = string(localObjRef.Group)
-	}
-
-	if localObjRef.Kind == "" {
-		return nil, ErrLocalObjRefMissingKind
-	}
-	refKind := localObjRef.Kind
-
-	localObjGK := metav1.GroupKind{Group: refGroup, Kind: string(refKind)}
-	return r.getRef(ctx, obj, string(localObjRef.Name), nil, localObjGK)
-}
-
 func (r *gatewayQueries) GetBackendForRef(ctx context.Context, obj From, backend *apiv1.BackendObjectReference) (client.Object, error) {
 	backendKind := "Service"
 	backendGroup := ""
@@ -423,21 +404,19 @@ func (r *gatewayQueries) GetBackendForRef(ctx context.Context, obj From, backend
 }
 
 func (r *gatewayQueries) getRef(ctx context.Context, from From, backendName string, backendNS *apiv1.Namespace, backendGK metav1.GroupKind) (client.Object, error) {
-	fromNs := from.Namespace()
-	if fromNs == "" {
-		fromNs = "default"
-	}
-	ns := fromNs
+
+	ns := from.Namespace()
 	if backendNS != nil {
 		ns = string(*backendNS)
 	}
-	if ns != fromNs {
+	if ns != from.Namespace() {
+
 		fromgk, err := from.GroupKind()
 		if err != nil {
 			return nil, err
 		}
 		// check if we're allowed to reference this namespace
-		allowed, err := r.referenceAllowed(ctx, fromgk, fromNs, backendGK, ns, backendName)
+		allowed, err := r.referenceAllowed(ctx, fromgk, from.Namespace(), backendGK, ns, backendName)
 		if err != nil {
 			return nil, err
 		}
