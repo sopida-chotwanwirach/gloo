@@ -19,8 +19,6 @@ import (
 // Since the vault.AuthMethod interface does not have corresponding mocks, we have to define our own.
 //go:generate mockgen -destination mocks/mock_auth.go -package mocks github.com/hashicorp/vault/api AuthMethod
 
-// mockgen -source projects/gloo/pkg/bootstrap/clients/vault/auth.go  -destination  ./projects/gloo/pkg/bootstrap/clients/vault/mocks/mock_auth.go -aux_files github.com/solo-io/gloo/projects/gloo/pkg/bootstrap/clients/vault=projects/gloo/pkg/bootstrap/clients/vault/renewal.go
-
 type ClientAuth interface {
 	// vault.AuthMethod provides Login(ctx context.Context, client *Client) (*Secret, error)
 	vault.AuthMethod

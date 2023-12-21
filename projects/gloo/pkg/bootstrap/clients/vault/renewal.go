@@ -10,8 +10,6 @@ import (
 	"github.com/solo-io/go-utils/contextutils"
 )
 
-//  mockgen -source projects/gloo/pkg/bootstrap/clients/vault/renewal.go >  ./projects/gloo/pkg/bootstrap/clients/vault/mocks/mock_renewal.go
-
 type TokenWatcher interface {
 	DoneCh() <-chan error
 	RenewCh() <-chan *vault.RenewOutput

@@ -12,7 +12,6 @@ import (
 	"github.com/rotisserie/eris"
 	v1 "github.com/solo-io/gloo/projects/gloo/pkg/api/v1"
 	. "github.com/solo-io/gloo/projects/gloo/pkg/bootstrap/clients/vault"
-	mock_vault "github.com/solo-io/gloo/projects/gloo/pkg/bootstrap/clients/vault/mocks"
 
 	"github.com/solo-io/gloo/mocks"
 	"github.com/solo-io/gloo/test/gomega/assertions"
@@ -34,7 +33,6 @@ var _ = Describe("ClientAuth", func() {
 		clientAuth ClientAuth
 		ctrl       *gomock.Controller
 
-		mockTokenRenewer *mock_vault.MockTokenRenewer
 		//secret     *vaultapi.Secret
 	)
 
@@ -137,10 +135,7 @@ var _ = Describe("ClientAuth", func() {
 				internalAuthMethod := mocks.NewMockAuthMethod(ctrl)
 				internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).Return(nil, eris.New("mocked error message")).AnyTimes()
 
-				mockTokenRenewer = mock_vault.NewMockTokenRenewer(ctrl)
-				mockTokenRenewer.EXPECT().StartRenewal(ctx, nil, nil).Return(nil).Times(0)
-
-				clientAuth = NewRemoteTokenAuth(internalAuthMethod, mockTokenRenewer, &v1.Settings_VaultAwsAuth{}, retry.Attempts(3))
+				clientAuth = NewRemoteTokenAuth(internalAuthMethod, &NoOpRenewal{}, &v1.Settings_VaultAwsAuth{}, retry.Attempts(3))
 			})
 
 			It("should return the error", func() {
@@ -177,12 +172,7 @@ var _ = Describe("ClientAuth", func() {
 				internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).Return(nil, eris.New("error")).Times(1)
 				internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).Return(secret, nil).Times(1)
 
-				mockTokenRenewer = mock_vault.NewMockTokenRenewer(ctrl)
-				// Its tricky to get the right client argument to StartRenewal because it is created  in
-				// the NewAuthenticatedClient function. So we just check that it is called with a non-nil
-				mockTokenRenewer.EXPECT().StartRenewal(ctx, gomock.Any(), secret).Return(nil).Times(1)
-
-				clientAuth = NewRemoteTokenAuth(internalAuthMethod, mockTokenRenewer, &v1.Settings_VaultAwsAuth{}, retry.Attempts(5))
+				clientAuth = NewRemoteTokenAuth(internalAuthMethod, &NoOpRenewal{}, &v1.Settings_VaultAwsAuth{}, retry.Attempts(5))
 			})
 
 			It("should return a client", func() {

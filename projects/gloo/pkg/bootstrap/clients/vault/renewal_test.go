@@ -14,9 +14,21 @@ import (
 	"github.com/solo-io/gloo/mocks"
 	v1 "github.com/solo-io/gloo/projects/gloo/pkg/api/v1"
 	. "github.com/solo-io/gloo/projects/gloo/pkg/bootstrap/clients/vault"
-	vault_mocks "github.com/solo-io/gloo/projects/gloo/pkg/bootstrap/clients/vault/mocks"
 	"github.com/solo-io/gloo/test/gomega/assertions"
 )
+
+type testWatcher struct {
+	DoneChannel  chan error
+	RenewChannel chan *vault.RenewOutput
+}
+
+func (t *testWatcher) DoneCh() <-chan error {
+	return t.DoneChannel
+}
+
+func (t *testWatcher) RenewCh() <-chan *vault.RenewOutput {
+	return t.RenewChannel
+}
 
 var _ = Describe("Vault Token Renewal", func() {
 	var (
@@ -26,14 +38,14 @@ var _ = Describe("Vault Token Renewal", func() {
 		renewer *VaultTokenRenewer
 		secret  *vault.Secret
 
-		clientAuth  ClientAuth
-		ctrl        *gomock.Controller
-		errMock     = eris.New("mocked error message")
-		mockWatcher *vault_mocks.MockTokenWatcher
+		clientAuth ClientAuth
+		ctrl       *gomock.Controller
+		errMock    = eris.New("mocked error message")
+		tw         TokenWatcher
 	)
 
 	var getMockWatcher = func(client *vault.Client, secret *vault.Secret, watcherIncrement int) (TokenWatcher, error) {
-		return mockWatcher, nil
+		return tw, nil
 	}
 
 	BeforeEach(func() {
@@ -53,14 +65,13 @@ var _ = Describe("Vault Token Renewal", func() {
 		cancel()
 	})
 
-	XWhen("Login fails", func() {
+	When("Login fails sometimes", func() {
 		BeforeEach(func() {
 			ctrl = gomock.NewController(GinkgoT())
 			internalAuthMethod := mocks.NewMockAuthMethod(ctrl)
 			internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).Return(nil, errMock).AnyTimes()
 
 			clientAuth = NewRemoteTokenAuth(internalAuthMethod, &NoOpRenewal{}, &v1.Settings_VaultAwsAuth{}, retry.Attempts(3))
-			mockWatcher = vault_mocks.NewMockTokenWatcher(ctrl)
 
 			renewer = NewVaultTokenRenewer(&NewVaultTokenRenewerParams{
 				Auth:           clientAuth,
@@ -90,31 +101,25 @@ var _ = Describe("Vault Token Renewal", func() {
 		})
 	})
 
-	When("Everything is running smooth", func() {
+	When("Login always succeeds", func() {
 		var (
 			doneCh  chan error
 			renewCh chan *vault.RenewOutput
 		)
 		BeforeEach(func() {
-			// Login always succeeds
-			//
 			ctrl = gomock.NewController(GinkgoT())
 			internalAuthMethod := mocks.NewMockAuthMethod(ctrl)
 			internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).Return(secret, nil).AnyTimes()
 
 			clientAuth = NewRemoteTokenAuth(internalAuthMethod, &NoOpRenewal{}, &v1.Settings_VaultAwsAuth{}, retry.Attempts(3))
-			mockWatcher = vault_mocks.NewMockTokenWatcher(ctrl)
 
 			doneCh = make(chan error, 1)
 			renewCh = make(chan *vault.RenewOutput, 1)
 
-			mockWatcher.EXPECT().DoneCh().AnyTimes().DoAndReturn(func() <-chan error {
-				return doneCh
-			})
-
-			mockWatcher.EXPECT().RenewCh().AnyTimes().DoAndReturn(func() <-chan *vault.RenewOutput {
-				return renewCh
-			})
+			tw = &testWatcher{
+				DoneChannel:  doneCh,
+				RenewChannel: renewCh,
+			}
 
 			renewer = NewVaultTokenRenewer(&NewVaultTokenRenewerParams{
 				Auth:           clientAuth,
@@ -125,6 +130,8 @@ var _ = Describe("Vault Token Renewal", func() {
 			resetViews()
 		})
 		It("Renewal should work", func() {
+			// We are going to send a renewal, then a failure, then a renewal, then a cancel
+			// This tests all possible channel outputs. We'll look to see the correct metrics were collected
 			go func() {
 				time.Sleep(1 * time.Second)
 				renewCh <- &vault.RenewOutput{}
