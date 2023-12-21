@@ -156,7 +156,7 @@ var _ = Describe("ClientAuth", func() {
 
 		})
 
-		XWhen("internal auth method returns an error, and then a success", func() {
+		When("internal auth method returns an error, and then a success", func() {
 			var (
 				client *vaultapi.Client
 				err    error
@@ -178,8 +178,9 @@ var _ = Describe("ClientAuth", func() {
 				internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).Return(secret, nil).Times(1)
 
 				mockTokenRenewer = mock_vault.NewMockTokenRenewer(ctrl)
-				// this is the line that needs cleaning up
-				mockTokenRenewer.EXPECT().StartRenewal(ctx, nil, secret).Return(nil).Times(1)
+				// Its tricky to get the right client argument to StartRenewal because it is created  in
+				// the NewAuthenticatedClient function. So we just check that it is called with a non-nil
+				mockTokenRenewer.EXPECT().StartRenewal(ctx, gomock.Any(), secret).Return(nil).Times(1)
 
 				clientAuth = NewRemoteTokenAuth(internalAuthMethod, mockTokenRenewer, &v1.Settings_VaultAwsAuth{}, retry.Attempts(5))
 			})
