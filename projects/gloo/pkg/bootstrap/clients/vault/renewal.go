@@ -72,7 +72,7 @@ func (r *VaultTokenRenewer) RenewToken(ctx context.Context, client *vault.Client
 				return // ! we are now no longer renewing the token
 			} else {
 				// This should never happen because we are retrying on all non-context errors
-				contextutils.LoggerFrom(ctx).Errorf("unable to authenticate to Vault: %v. This error is expected to be unreachable.", err)
+				contextutils.LoggerFrom(ctx).Errorf("unable to authenticate to Vault: %v.", err)
 			}
 		}
 
@@ -85,7 +85,6 @@ func (r *VaultTokenRenewer) RenewToken(ctx context.Context, client *vault.Client
 		}
 
 		if !retry {
-			// contextutils.LoggerFrom(ctx).Infof("Stopping renewToken goroutine")
 			return
 		}
 
@@ -121,22 +120,23 @@ func (r *VaultTokenRenewer) manageTokenLifecycle(ctx context.Context, client *va
 	if renewable, err := secret.TokenIsRenewable(); !renewable || err != nil {
 		// If the token is not renewable and we immediately try to renew it, we will just keep trying and hitting the same error
 		// So we need to throw in a sleep
-		retryOnNonRenwableSleep := watcherIncrement
+		retryOnNonRenewableSleep := watcherIncrement
 		defaultRetry := 60
-		if retryOnNonRenwableSleep == 0 {
-			retryOnNonRenwableSleep = 60
+		if retryOnNonRenewableSleep == 0 {
+			retryOnNonRenewableSleep = defaultRetry
 		}
 
-		contextutils.LoggerFrom(ctx).Errorw("Token is not configured to be renewable.", "retry", retryOnNonRenwableSleep, "Error", err, "TokenIsRenewable", renewable)
+		contextutils.LoggerFrom(ctx).Errorw("Token is not configured to be renewable.", "retry", retryOnNonRenewableSleep, "Error", err, "TokenIsRenewable", renewable)
 
 		// The units don't make sense but this is the way the docs recommend doing it
-		time.Sleep(time.Duration(defaultRetry) * time.Second)
+		time.Sleep(time.Duration(retryOnNonRenewableSleep) * time.Second)
 
 		// If we are caught in this loop, we don't get to the code that checks the state of the context, so we need to check it here
-		retryLogin := ctx.Done() == nil
+		retryLogin := ctx.Err() == nil
 		return retryLogin, nil
 	}
 
+	contextutils.LoggerFrom(ctx).Error("Token is renewable.")
 	watcher, err := r.getWatcher(client, secret, watcherIncrement)
 
 	// The only errors the constructor can return are if the input parameter is nil or if the secret is nil, and we

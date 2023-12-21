@@ -37,6 +37,10 @@ func resetViews() {
 		MLoginFailuresView,
 		MLoginSuccessesView,
 		MLastLoginFailureView,
+		MLastRenewFailureView,
+		MLastRenewSuccessView,
+		MRenewFailuresView,
+		MRenewSuccessesView,
 	}
 	view.Unregister(views...)
 	_ = view.Register(views...)
@@ -44,4 +48,8 @@ func resetViews() {
 	assertions.ExpectStatLastValueMatches(MLastLoginFailure, BeZero())
 	assertions.ExpectStatSumMatches(MLoginSuccesses, BeZero())
 	assertions.ExpectStatSumMatches(MLoginFailures, BeZero())
+	assertions.ExpectStatLastValueMatches(MLastRenewFailure, BeZero())
+	assertions.ExpectStatLastValueMatches(MLastRenewSuccess, BeZero())
+	assertions.ExpectStatSumMatches(MRenewFailures, BeZero())
+	assertions.ExpectStatSumMatches(MRenewSuccesses, BeZero())
 }
