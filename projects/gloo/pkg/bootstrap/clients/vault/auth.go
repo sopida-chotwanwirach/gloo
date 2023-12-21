@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/rotisserie/eris"
 	errors "github.com/rotisserie/eris"
 	"github.com/solo-io/gloo/pkg/utils/awsutils"
 
@@ -19,6 +18,8 @@ import (
 // In an ideal world, we would re-use the mocks provided by an external library.
 // Since the vault.AuthMethod interface does not have corresponding mocks, we have to define our own.
 //go:generate mockgen -destination mocks/mock_auth.go -package mocks github.com/hashicorp/vault/api AuthMethod
+
+// mockgen -source projects/gloo/pkg/bootstrap/clients/vault/auth.go  -destination  ./projects/gloo/pkg/bootstrap/clients/vault/mocks/mock_auth.go -aux_files github.com/solo-io/gloo/projects/gloo/pkg/bootstrap/clients/vault=projects/gloo/pkg/bootstrap/clients/vault/renewal.go
 
 type ClientAuth interface {
 	// vault.AuthMethod provides Login(ctx context.Context, client *Client) (*Secret, error)
@@ -37,7 +38,7 @@ var (
 		return errors.Wrap(err, "unable to authenticate to vault")
 	}
 	ErrPartialCredentials = func(err error) error {
-		return eris.Wrap(err, "only partial credentials were provided for AWS IAM auth: ")
+		return errors.Wrap(err, "only partial credentials were provided for AWS IAM auth: ")
 	}
 	ErrAccessKeyId       = errors.New("access key id must be defined for AWS IAM auth")
 	ErrSecretAccessKey   = errors.New("secret access key must be defined for AWS IAM auth")
@@ -173,7 +174,7 @@ func (r *RemoteTokenAuth) Login(ctx context.Context, client *vault.Client) (*vau
 
 	// As noted above, we need to check the context here, because our retry function can not return errors
 	if ctx.Err() != nil {
-		return nil, eris.Wrap(ctx.Err(), "Login canceled")
+		return nil, errors.Wrap(ctx.Err(), "Login canceled")
 	}
 
 	return loginResponse, loginErr

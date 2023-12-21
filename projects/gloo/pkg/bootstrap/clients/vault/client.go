@@ -3,7 +3,6 @@ package vault
 import (
 	"context"
 
-	"github.com/hashicorp/vault/api"
 	vault "github.com/hashicorp/vault/api"
 	v1 "github.com/solo-io/gloo/projects/gloo/pkg/api/v1"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -37,7 +36,7 @@ func NewUnauthenticatedClient(vaultSettings *v1.Settings_VaultSecrets) (*vault.C
 		return nil, err
 	}
 
-	return api.NewClient(cfg)
+	return vault.NewClient(cfg)
 }
 
 // AuthenticateClient authenticates the provided vault client with the provided clientAuth.
@@ -47,16 +46,11 @@ func AuthenticateClient(ctx context.Context, client *vault.Client, clientAuth Cl
 		return nil, err
 	}
 
-	// err = clientAuth.StartRenewal(ctx, client, secret)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
 	return secret, nil
 }
 
-func parseVaultSettings(vaultSettings *v1.Settings_VaultSecrets) (*api.Config, error) {
-	cfg := api.DefaultConfig()
+func parseVaultSettings(vaultSettings *v1.Settings_VaultSecrets) (*vault.Config, error) {
+	cfg := vault.DefaultConfig()
 
 	if addr := vaultSettings.GetAddress(); addr != "" {
 		cfg.Address = addr
@@ -70,8 +64,8 @@ func parseVaultSettings(vaultSettings *v1.Settings_VaultSecrets) (*api.Config, e
 	return cfg, nil
 }
 
-func parseTlsSettings(vaultSettings *v1.Settings_VaultSecrets) *api.TLSConfig {
-	var tlsConfig *api.TLSConfig
+func parseTlsSettings(vaultSettings *v1.Settings_VaultSecrets) *vault.TLSConfig {
+	var tlsConfig *vault.TLSConfig
 
 	// helper functions to avoid repeated nilchecking
 	addStringSetting := func(s string, addSettingFunc func(string)) {
@@ -79,7 +73,7 @@ func parseTlsSettings(vaultSettings *v1.Settings_VaultSecrets) *api.TLSConfig {
 			return
 		}
 		if tlsConfig == nil {
-			tlsConfig = &api.TLSConfig{}
+			tlsConfig = &vault.TLSConfig{}
 		}
 		addSettingFunc(s)
 	}
@@ -88,7 +82,7 @@ func parseTlsSettings(vaultSettings *v1.Settings_VaultSecrets) *api.TLSConfig {
 			return
 		}
 		if tlsConfig == nil {
-			tlsConfig = &api.TLSConfig{}
+			tlsConfig = &vault.TLSConfig{}
 		}
 		addSettingFunc(b.GetValue())
 	}

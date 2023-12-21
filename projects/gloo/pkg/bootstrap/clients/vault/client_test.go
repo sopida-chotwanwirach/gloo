@@ -178,7 +178,7 @@ var _ = Describe("ClientAuth", func() {
 				internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).Return(secret, nil).Times(1)
 
 				mockTokenRenewer = mock_vault.NewMockTokenRenewer(ctrl)
-				mockTokenRenewer.EXPECT().StartRenewal(ctx, nil, secret).Return(nil).Times(1)
+				//mockTokenRenewer.EXPECT().StartRenewal(ctx, nil, secret).Return(nil).Times(1)
 
 				clientAuth = NewRemoteTokenAuth(internalAuthMethod, mockTokenRenewer, &v1.Settings_VaultAwsAuth{}, retry.Attempts(5))
 			})

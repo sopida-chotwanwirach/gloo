@@ -12,43 +12,6 @@ import (
 	api "github.com/hashicorp/vault/api"
 )
 
-// MockTokenRenewer is a mock of TokenRenewer interface.
-type MockTokenRenewer struct {
-	ctrl     *gomock.Controller
-	recorder *MockTokenRenewerMockRecorder
-}
-
-// MockTokenRenewerMockRecorder is the mock recorder for MockTokenRenewer.
-type MockTokenRenewerMockRecorder struct {
-	mock *MockTokenRenewer
-}
-
-// NewMockTokenRenewer creates a new mock instance.
-func NewMockTokenRenewer(ctrl *gomock.Controller) *MockTokenRenewer {
-	mock := &MockTokenRenewer{ctrl: ctrl}
-	mock.recorder = &MockTokenRenewerMockRecorder{mock}
-	return mock
-}
-
-// EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockTokenRenewer) EXPECT() *MockTokenRenewerMockRecorder {
-	return m.recorder
-}
-
-// StartRenewal mocks base method.
-func (m *MockTokenRenewer) StartRenewal(ctx context.Context, client *api.Client, secret *api.Secret) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "StartRenewal", ctx, client, secret)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// StartRenewal indicates an expected call of StartRenewal.
-func (mr *MockTokenRenewerMockRecorder) StartRenewal(ctx, client, secret interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "StartRenewal", reflect.TypeOf((*MockTokenRenewer)(nil).StartRenewal), ctx, client, secret)
-}
-
 // MockClientAuth is a mock of ClientAuth interface.
 type MockClientAuth struct {
 	ctrl     *gomock.Controller

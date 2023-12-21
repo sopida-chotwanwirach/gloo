@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 	"time"
 
@@ -10,26 +11,41 @@ import (
 	"github.com/solo-io/go-utils/contextutils"
 )
 
+//  mockgen -source projects/gloo/pkg/bootstrap/clients/vault/renewal.go >  ./projects/gloo/pkg/bootstrap/clients/vault/mocks/mock_renewal.go
+
+type TokenWatcher interface {
+	DoneCh() <-chan error
+	RenewCh() <-chan *vault.RenewOutput
+}
+
 type TokenRenewer interface {
 	// Start Renewal should be called after a successful login to start the renewal process
 	// This method may have many different types of implementation, from just a noop to spinning up a separate go routine
 	StartRenewal(ctx context.Context, client *vault.Client, secret *vault.Secret) error
 }
 
+type getWatcherFunc func(client *vault.Client, secret *vault.Secret, watcherIncrement int) (TokenWatcher, error)
 type VaultTokenRenewer struct {
 	auth           vault.AuthMethod
 	leaseIncrement int
+	getWatcher     getWatcherFunc
 }
 
 type NewVaultTokenRenewerParams struct {
 	Auth           vault.AuthMethod
 	LeaseIncrement int
+	GetWatcher     getWatcherFunc
 }
 
 func NewVaultTokenRenewer(params *NewVaultTokenRenewerParams) *VaultTokenRenewer {
+	if params.GetWatcher == nil {
+		params.GetWatcher = vaultGetWatcher
+	}
+
 	return &VaultTokenRenewer{
 		auth:           params.Auth,
 		leaseIncrement: params.LeaseIncrement,
+		getWatcher:     params.GetWatcher,
 	}
 }
 
@@ -80,30 +96,7 @@ func (r *VaultTokenRenewer) RenewToken(ctx context.Context, client *vault.Client
 
 }
 
-// Starts token lifecycle management
-// otherwise returns nil so we can attempt login again.
-// based on https://github.com/hashicorp/vault-examples/blob/main/examples/token-renewal/go/example.go
-func (r *VaultTokenRenewer) manageTokenLifecycle(ctx context.Context, client *vault.Client, secret *vault.Secret, watcherIncrement int) (bool, error) {
-	// Make sure the token is renewable
-	// if renewable, err := secret.TokenIsRenewable(); !renewable || err != nil {
-	// 	// If the token is not renewable and we immediately try to renew it, we will just keep trying and hitting the same error
-	// 	// So we need to throw in a sleep
-	// 	retryOnNonRenwableSleep := watcherIncrement
-	// 	defaultRetry := 60
-	// 	if retryOnNonRenwableSleep == 0 {
-	// 		retryOnNonRenwableSleep = 60
-	// 	}
-
-	// 	contextutils.LoggerFrom(ctx).Errorw("Token is not configured to be renewable.", "retry", retryOnNonRenwableSleep, "Error", err, "TokenIsRenewable", renewable)
-
-	// 	// The units don't make sense but this is the way the docs recommend doing it
-	// 	time.Sleep(time.Duration(defaultRetry) * time.Second)
-
-	// 	// If we are caught in this loop, we don't get to the code that checks the state of the context, so we need to check it here
-	// 	retryLogin := ctx.Done() == nil
-	// 	return retryLogin, nil
-	// }
-
+var vaultGetWatcher = func(client *vault.Client, secret *vault.Secret, watcherIncrement int) (TokenWatcher, error) {
 	watcher, err := client.NewLifetimeWatcher(&vault.LifetimeWatcherInput{
 		Secret:    secret,
 		Increment: watcherIncrement,
@@ -113,14 +106,47 @@ func (r *VaultTokenRenewer) manageTokenLifecycle(ctx context.Context, client *va
 		RenewBehavior: vault.RenewBehaviorIgnoreErrors,
 	})
 
+	if err != nil {
+		return nil, ErrInitializeWatcher(err)
+	}
+
+	go watcher.Start()
+	defer watcher.Stop()
+
+	return watcher, nil
+}
+
+// Starts token lifecycle management
+// otherwise returns nil so we can attempt login again.
+// based on https://github.com/hashicorp/vault-examples/blob/main/examples/token-renewal/go/example.go
+func (r *VaultTokenRenewer) manageTokenLifecycle(ctx context.Context, client *vault.Client, secret *vault.Secret, watcherIncrement int) (bool, error) {
+	// Make sure the token is renewable
+	if renewable, err := secret.TokenIsRenewable(); !renewable || err != nil {
+		// If the token is not renewable and we immediately try to renew it, we will just keep trying and hitting the same error
+		// So we need to throw in a sleep
+		retryOnNonRenwableSleep := watcherIncrement
+		defaultRetry := 60
+		if retryOnNonRenwableSleep == 0 {
+			retryOnNonRenwableSleep = 60
+		}
+
+		contextutils.LoggerFrom(ctx).Errorw("Token is not configured to be renewable.", "retry", retryOnNonRenwableSleep, "Error", err, "TokenIsRenewable", renewable)
+
+		// The units don't make sense but this is the way the docs recommend doing it
+		time.Sleep(time.Duration(defaultRetry) * time.Second)
+
+		// If we are caught in this loop, we don't get to the code that checks the state of the context, so we need to check it here
+		retryLogin := ctx.Done() == nil
+		return retryLogin, nil
+	}
+
+	watcher, err := r.getWatcher(client, secret, watcherIncrement)
+
 	// The only errors the constructor can return are if the input parameter is nil or if the secret is nil, and we
 	// are always passing input and have validated the secret is not nil in the calling
 	if err != nil {
 		return false, ErrInitializeWatcher(err)
 	}
-
-	go watcher.Start()
-	defer watcher.Stop()
 
 	for {
 		select {
@@ -129,6 +155,7 @@ func (r *VaultTokenRenewer) manageTokenLifecycle(ctx context.Context, client *va
 		// extending it or renewing is disabled. In any case, the caller
 		// needs to attempt to log in again.
 		case err := <-watcher.DoneCh():
+			fmt.Println("donech")
 			utils.Measure(ctx, MLastRenewFailure, time.Now().Unix())
 			utils.MeasureOne(ctx, MRenewFailures)
 			if err != nil {

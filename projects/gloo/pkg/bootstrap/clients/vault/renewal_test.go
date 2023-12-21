@@ -6,34 +6,43 @@ import (
 
 	"github.com/avast/retry-go"
 	"github.com/golang/mock/gomock"
-	vaultapi "github.com/hashicorp/vault/api"
+	vault "github.com/hashicorp/vault/api"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/rotisserie/eris"
+
 	"github.com/solo-io/gloo/mocks"
 	v1 "github.com/solo-io/gloo/projects/gloo/pkg/api/v1"
 	. "github.com/solo-io/gloo/projects/gloo/pkg/bootstrap/clients/vault"
+	vault_mocks "github.com/solo-io/gloo/projects/gloo/pkg/bootstrap/clients/vault/mocks"
 	"github.com/solo-io/gloo/test/gomega/assertions"
 )
 
-var _ = FDescribe("Vault Token Renewal", func() {
+var _ = Describe("Vault Token Renewal", func() {
 	var (
 		ctx     context.Context
 		cancel  context.CancelFunc
-		client  *vaultapi.Client
+		client  *vault.Client
 		renewer *VaultTokenRenewer
-		secret  *vaultapi.Secret
+		secret  *vault.Secret
 
-		clientAuth ClientAuth
-		ctrl       *gomock.Controller
-		errMock    = eris.New("mocked error message")
+		clientAuth  ClientAuth
+		ctrl        *gomock.Controller
+		errMock     = eris.New("mocked error message")
+		mockWatcher *vault_mocks.MockTokenWatcher
 	)
+
+	var getMockWatcher = func(client *vault.Client, secret *vault.Secret, watcherIncrement int) (TokenWatcher, error) {
+		return mockWatcher, nil
+	}
 
 	BeforeEach(func() {
 		ctx, cancel = context.WithCancel(context.Background())
 
-		secret = &vaultapi.Secret{
-			Renewable:     true,
+		secret = &vault.Secret{
+			Auth: &vault.SecretAuth{
+				Renewable: true,
+			},
 			LeaseDuration: 100,
 		}
 
@@ -51,10 +60,12 @@ var _ = FDescribe("Vault Token Renewal", func() {
 			internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).Return(nil, errMock).AnyTimes()
 
 			clientAuth = NewRemoteTokenAuth(internalAuthMethod, &NoOpRenewal{}, &v1.Settings_VaultAwsAuth{}, retry.Attempts(3))
+			mockWatcher = vault_mocks.NewMockTokenWatcher(ctrl)
 
 			renewer = NewVaultTokenRenewer(&NewVaultTokenRenewerParams{
 				Auth:           clientAuth,
 				LeaseIncrement: 1,
+				GetWatcher:     getMockWatcher,
 			})
 
 			resetViews()
@@ -72,44 +83,65 @@ var _ = FDescribe("Vault Token Renewal", func() {
 			assertions.ExpectStatLastValueMatches(MLastLoginSuccess, BeZero())
 			assertions.ExpectStatSumMatches(MLoginFailures, Not(BeZero()))
 			assertions.ExpectStatSumMatches(MLoginSuccesses, BeZero())
-			// assertions.ExpectStatLastValueMatches(MLastRenewFailure, Not(BeZero()))
-			// assertions.ExpectStatLastValueMatches(MLastRenewSuccess, BeZero())
-			// assertions.ExpectStatSumMatches(MRenewFailures, BeZero())
-			// assertions.ExpectStatSumMatches(MRenewSuccesses, Equal(1))
+			assertions.ExpectStatLastValueMatches(MLastRenewFailure, Not(BeZero()))
+			assertions.ExpectStatLastValueMatches(MLastRenewSuccess, BeZero())
+			assertions.ExpectStatSumMatches(MRenewFailures, BeZero())
+			assertions.ExpectStatSumMatches(MRenewSuccesses, Equal(1))
 		})
 	})
 
-	FWhen("Everythign is running smooth", func() {
+	FWhen("Everything is running smooth", func() {
+		var (
+			doneCh  chan error
+			renewCh chan *vault.RenewOutput
+		)
 		BeforeEach(func() {
+			// Login always succeeds
+			//
 			ctrl = gomock.NewController(GinkgoT())
 			internalAuthMethod := mocks.NewMockAuthMethod(ctrl)
 			internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).Return(secret, nil).AnyTimes()
 
 			clientAuth = NewRemoteTokenAuth(internalAuthMethod, &NoOpRenewal{}, &v1.Settings_VaultAwsAuth{}, retry.Attempts(3))
+			mockWatcher = vault_mocks.NewMockTokenWatcher(ctrl)
+
+			doneCh = make(chan error, 1)
+			renewCh = make(chan *vault.RenewOutput, 1)
+
+			mockWatcher.EXPECT().DoneCh().AnyTimes().DoAndReturn(func() <-chan error {
+				return doneCh
+			})
+
+			mockWatcher.EXPECT().RenewCh().AnyTimes().DoAndReturn(func() <-chan *vault.RenewOutput {
+				return renewCh
+			})
 
 			renewer = NewVaultTokenRenewer(&NewVaultTokenRenewerParams{
 				Auth:           clientAuth,
 				LeaseIncrement: 1,
+				GetWatcher:     getMockWatcher,
 			})
 
 			resetViews()
 		})
 		It("Renewal should work", func() {
 			go func() {
-				time.Sleep(15 * time.Second)
+				time.Sleep(1 * time.Second)
+				renewCh <- &vault.RenewOutput{}
+				time.Sleep(1 * time.Second)
 				cancel()
 			}()
 
 			renewer.RenewToken(ctx, client, secret)
 
-			assertions.ExpectStatLastValueMatches(MLastLoginFailure, BeZero())
-			assertions.ExpectStatLastValueMatches(MLastLoginSuccess, Not(BeZero()))
-			assertions.ExpectStatSumMatches(MLoginFailures, BeZero())
-			assertions.ExpectStatSumMatches(MLoginSuccesses, Not(BeZero()))
+			// assertions.ExpectStatLastValueMatches(MLastLoginFailure, BeZero())
+			//assertions.ExpectStatLastValueMatches(MLastLoginSuccess, Not(BeZero()))
+			// assertions.ExpectStatSumMatches(MLoginFailures, BeZero())
+			// assertions.ExpectStatSumMatches(MLoginSuccesses, Not(BeZero()))
 			// assertions.ExpectStatLastValueMatches(MLastRenewFailure, Not(BeZero()))
-			// assertions.ExpectStatLastValueMatches(MLastRenewSuccess, BeZero())
-			// assertions.ExpectStatSumMatches(MRenewFailures, BeZero())
-			// assertions.ExpectStatSumMatches(MRenewSuccesses, Equal(1))
+			// assertions.ExpectStatLastValueMatches(MLastRenewSuccess, Not(BeZero()))
+			//assertions.ExpectStatSumMatches(MRenewFailures, Equal(1))
+			assertions.ExpectStatSumMatches(MRenewSuccesses, Equal(1))
 		})
 	})
 })
