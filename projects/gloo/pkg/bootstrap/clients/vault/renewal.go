@@ -21,7 +21,7 @@ type TokenRenewer interface {
 	StartRenewal(ctx context.Context, client *vault.Client, secret *vault.Secret) error
 }
 
-type getWatcherFunc func(client *vault.Client, secret *vault.Secret, watcherIncrement int) (TokenWatcher, error)
+type getWatcherFunc func(client *vault.Client, secret *vault.Secret, watcherIncrement int) (TokenWatcher, func(), error)
 type VaultTokenRenewer struct {
 	auth           vault.AuthMethod
 	leaseIncrement int
@@ -92,7 +92,7 @@ func (r *VaultTokenRenewer) RenewToken(ctx context.Context, client *vault.Client
 
 }
 
-var vaultGetWatcher = func(client *vault.Client, secret *vault.Secret, watcherIncrement int) (TokenWatcher, error) {
+var vaultGetWatcher = func(client *vault.Client, secret *vault.Secret, watcherIncrement int) (TokenWatcher, func(), error) {
 	watcher, err := client.NewLifetimeWatcher(&vault.LifetimeWatcherInput{
 		Secret:    secret,
 		Increment: watcherIncrement,
@@ -103,13 +103,13 @@ var vaultGetWatcher = func(client *vault.Client, secret *vault.Secret, watcherIn
 	})
 
 	if err != nil {
-		return nil, ErrInitializeWatcher(err)
+		return nil, nil, ErrInitializeWatcher(err)
 	}
 
 	go watcher.Start()
-	defer watcher.Stop()
+	//defer watcher.Stop()
 
-	return watcher, nil
+	return watcher, watcher.Stop, nil
 }
 
 // Starts token lifecycle management
@@ -137,13 +137,15 @@ func (r *VaultTokenRenewer) manageTokenLifecycle(ctx context.Context, client *va
 		return retryLogin, nil
 	}
 
-	watcher, err := r.getWatcher(client, secret, watcherIncrement)
+	watcher, stop, err := r.getWatcher(client, secret, watcherIncrement)
 
 	// The only errors the constructor can return are if the input parameter is nil or if the secret is nil, and we
 	// are always passing input and have validated the secret is not nil in the calling
 	if err != nil {
 		return false, ErrInitializeWatcher(err)
 	}
+
+	defer stop()
 
 	for {
 		select {

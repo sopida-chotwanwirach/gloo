@@ -32,8 +32,6 @@ var _ = Describe("ClientAuth", func() {
 
 		clientAuth ClientAuth
 		ctrl       *gomock.Controller
-
-		//secret     *vaultapi.Secret
 	)
 
 	BeforeEach(func() {
@@ -42,7 +40,6 @@ var _ = Describe("ClientAuth", func() {
 		// The tests below will be responsible for assigning this variable
 		// We re-set it here, just to be safe
 		clientAuth = nil
-		//client = nil
 
 		// We should not have any metrics set before running the tests
 		// This ensures that we are no leaking metrics between tests

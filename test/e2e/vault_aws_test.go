@@ -1,6 +1,8 @@
 package e2e_test
 
 import (
+	"time"
+
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -27,7 +29,7 @@ const (
 	vaultRole = "vault-role"
 )
 
-var _ = Describe("Vault Secret Store (AWS Auth)", decorators.Vault, func() {
+var _ = FDescribe("Vault Secret Store (AWS Auth)", decorators.Vault, func() {
 
 	var (
 		testContext         *e2e.TestContextWithVault
@@ -69,7 +71,6 @@ var _ = Describe("Vault Secret Store (AWS Auth)", decorators.Vault, func() {
 		testContext.RunVault()
 
 		// We need to turn on Vault AWS Auth after it has started running
-		//err := testContext.VaultInstance().EnableAWSCredentialsAuthMethod(vaultSecretSettings, vaultAwsRole)
 		err := testContext.VaultInstance().EnableAWSCredentialsAuthMethod(vaultSecretSettings, vaultAwsRole, []string{"default_ttl=10s", "max_ttl=10s"})
 		Expect(err).NotTo(HaveOccurred())
 
@@ -101,7 +102,28 @@ var _ = Describe("Vault Secret Store (AWS Auth)", decorators.Vault, func() {
 			}
 		})
 
-		It("can read secret using resource client", func() {
+		It("can read secret using resource client initially and after renewal", func() {
+			var (
+				secret *gloov1.Secret
+				err    error
+			)
+
+			Eventually(func(g Gomega) {
+				secret, err = testContext.TestClients().SecretClient.Read(
+					oauthSecret.GetMetadata().GetNamespace(),
+					oauthSecret.GetMetadata().GetName(),
+					clients.ReadOpts{
+						Ctx: testContext.Ctx(),
+					})
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(secret.GetOauth().GetClientSecret()).To(Equal("test"))
+			}, "5s", ".5s").Should(Succeed())
+
+			// Sleep and try again
+			time.Sleep(20 * time.Second)
+
+			// We are setting the ttl of the secret lease to 10 seconds, so this would fail without the goroutine which renews the lease.
+			// To see this fail, comment out the call to the 'renewToken' goroutine in pkg/bootstrap/clients/vault.go
 			Eventually(func(g Gomega) {
 				secret, err := testContext.TestClients().SecretClient.Read(
 					oauthSecret.GetMetadata().GetNamespace(),

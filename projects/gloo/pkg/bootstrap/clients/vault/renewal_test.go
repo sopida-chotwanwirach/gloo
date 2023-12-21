@@ -67,8 +67,8 @@ var _ = Describe("Vault Token Renewal", func() {
 		}
 	)
 
-	var getTestWatcher = func(client *vault.Client, secret *vault.Secret, watcherIncrement int) (TokenWatcher, error) {
-		return tw, nil
+	var getTestWatcher = func(client *vault.Client, secret *vault.Secret, watcherIncrement int) (TokenWatcher, func(), error) {
+		return tw, func() {}, nil
 	}
 
 	BeforeEach(func() {

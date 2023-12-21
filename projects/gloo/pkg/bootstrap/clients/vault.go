@@ -3,8 +3,10 @@ package clients
 import (
 	"context"
 
+	"github.com/rotisserie/eris"
 	v1 "github.com/solo-io/gloo/projects/gloo/pkg/api/v1"
 	"github.com/solo-io/gloo/projects/gloo/pkg/bootstrap/clients/vault"
+	"github.com/solo-io/go-utils/contextutils"
 	"github.com/solo-io/solo-kit/pkg/api/v1/clients/factory"
 
 	"github.com/hashicorp/vault/api"
@@ -33,7 +35,12 @@ func NewVaultSecretClientFactory(clientInit VaultClientInitFunc, pathPrefix, roo
 }
 
 // VaultClientForSettings returns a vault client based on the provided settings.
-func VaultClientForSettings(ctx context.Context, vaultSettings *v1.Settings_VaultSecrets, vaultAuth vault.ClientAuth) (*api.Client, error) {
+func VaultClientForSettings(ctx context.Context, vaultSettings *v1.Settings_VaultSecrets) (*api.Client, error) {
+	vaultAuth, err := vault.ClientAuthFactory(vaultSettings)
+	if err != nil {
+		err = eris.Wrap(err, "check Settings configuration")
+		contextutils.LoggerFrom(ctx).Error(err)
+	}
 	return vault.NewAuthenticatedClient(ctx, vaultSettings, vaultAuth)
 }
 
