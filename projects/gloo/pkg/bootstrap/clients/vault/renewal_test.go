@@ -88,7 +88,6 @@ var _ = Describe("Vault Token Renewal", func() {
 	})
 
 	When("Login always succeeds", func() {
-
 		BeforeEach(func() {
 			ctrl = gomock.NewController(GinkgoT())
 			internalAuthMethod := mocks.NewMockAuthMethod(ctrl)
@@ -116,7 +115,7 @@ var _ = Describe("Vault Token Renewal", func() {
 				cancel()
 			}()
 
-			renewer.RenewToken(ctx, client, secret)
+			renewer.RenewToken(ctx, client, clientAuth, secret)
 
 			assertions.ExpectStatLastValueMatches(MLastLoginFailure, BeZero())
 			assertions.ExpectStatLastValueMatches(MLastLoginSuccess, Not(BeZero()))
@@ -169,7 +168,7 @@ var _ = Describe("Vault Token Renewal", func() {
 				cancel()
 			}()
 
-			renewer.RenewToken(ctx, client, secret)
+			renewer.RenewToken(ctx, client, clientAuth, secret)
 
 			assertions.ExpectStatLastValueMatches(MLastLoginFailure, Not(BeZero()))
 			assertions.ExpectStatLastValueMatches(MLastLoginSuccess, Not(BeZero()))
@@ -213,7 +212,7 @@ var _ = Describe("Vault Token Renewal", func() {
 				cancel()
 			}()
 
-			renewer.RenewToken(ctx, client, secret)
+			renewer.RenewToken(ctx, client, clientAuth, secret)
 
 			assertions.ExpectStatLastValueMatches(MLastLoginFailure, Not(BeZero()))
 			assertions.ExpectStatLastValueMatches(MLastLoginSuccess, BeZero())
@@ -258,7 +257,7 @@ var _ = Describe("Vault Token Renewal", func() {
 				cancel()
 			}()
 
-			renewer.RenewToken(ctx, client, nonRenewableSecret())
+			renewer.RenewToken(ctx, client, clientAuth, nonRenewableSecret())
 
 			// The login never fails, it just returns an non-renewable secret
 			assertions.ExpectStatLastValueMatches(MLastLoginFailure, BeZero())

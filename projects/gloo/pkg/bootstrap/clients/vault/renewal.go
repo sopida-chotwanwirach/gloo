@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"fmt"
 	"math/rand"
 	"time"
 
@@ -16,10 +17,10 @@ type TokenWatcher interface {
 }
 
 type TokenRenewer interface {
-	// Start Renewal should be called after a successful login to start the renewal process
-	// This method may have many different types of implementation, from just a noop to spinning up a separate go routine
-	StartRenewal(ctx context.Context, client *vault.Client, secret *vault.Secret) error
+	StartRenewal(ctx context.Context, client *vault.Client, clientAuth ClientAuth, secret *vault.Secret) error
 }
+
+var _ TokenRenewer = &VaultTokenRenewer{}
 
 // getWatcherFunc is a function that returns a TokenWatcher and a function to stop the watcher
 // this lets us hide away some go routines while testing
@@ -53,14 +54,14 @@ func NewVaultTokenRenewer(params *NewVaultTokenRenewerParams) *VaultTokenRenewer
 }
 
 // StartRenewal wraps the renewal process in a go routine
-func (t *VaultTokenRenewer) StartRenewal(ctx context.Context, client *vault.Client, secret *vault.Secret) error {
-	go t.RenewToken(ctx, client, secret)
+func (t *VaultTokenRenewer) StartRenewal(ctx context.Context, client *vault.Client, clientAuth ClientAuth, secret *vault.Secret) error {
+	go t.RenewToken(ctx, client, clientAuth, secret)
 	return nil
 }
 
 // Once you've set the token for your Vault client, you will need to periodically renew its lease.
 // taken from https://github.com/hashicorp/vault-examples/blob/main/examples/token-renewal/go/example.go
-func (r *VaultTokenRenewer) RenewToken(ctx context.Context, client *vault.Client, secret *vault.Secret) {
+func (r *VaultTokenRenewer) RenewToken(ctx context.Context, client *vault.Client, clientAuth ClientAuth, secret *vault.Secret) {
 	contextutils.LoggerFrom(ctx).Debugf("Starting renewToken goroutine")
 
 	// On the first time through we have just logged in, so we don't need to do it again. Every other time we need to log in again.
@@ -68,19 +69,20 @@ func (r *VaultTokenRenewer) RenewToken(ctx context.Context, client *vault.Client
 	for {
 		var err error
 		if !haveValidSecret {
-			secret, err = r.auth.Login(ctx, client) //vi.loginWithRetry(ctx, client, awsAuth, nil)
+			fmt.Printf("Logging in again with %+v \n", clientAuth)
+			secret, err = clientAuth.Login(ctx, client) //vi.loginWithRetry(ctx, client, awsAuth, nil)
+			fmt.Printf("Login returned %+v, %+v \n", secret, err)
 		} else {
 			haveValidSecret = false
 		}
-		// The only errors we should ever hit are context errors because we are retrying on all other errors
+
 		if err != nil {
 			if ctx.Err() != nil {
 				contextutils.LoggerFrom(ctx).Errorf("renew token context error: %v", ctx.Err())
-				return // ! we are now no longer renewing the token
 			} else {
-				// This should never happen because we are retrying on all non-context errors
 				contextutils.LoggerFrom(ctx).Errorf("unable to authenticate to Vault: %v.", err)
 			}
+			return // we are now no longer renewing the token
 		}
 
 		retry, tokenErr := r.manageTokenLifecycle(ctx, client, secret, r.leaseIncrement)
@@ -90,6 +92,8 @@ func (r *VaultTokenRenewer) RenewToken(ctx context.Context, client *vault.Client
 		if tokenErr != nil {
 			contextutils.LoggerFrom(ctx).Errorf("unable to start managing token lifecycle: %v. This error is expected to be unreachable.", tokenErr)
 		}
+
+		fmt.Print("returned from manageTokenLifecycle, logging in again")
 
 		if !retry {
 			return
@@ -114,7 +118,6 @@ var vaultGetWatcher = func(client *vault.Client, secret *vault.Secret, watcherIn
 	}
 
 	go watcher.Start()
-	//defer watcher.Stop()
 
 	return watcher, watcher.Stop, nil
 }
@@ -164,10 +167,12 @@ func (r *VaultTokenRenewer) manageTokenLifecycle(ctx context.Context, client *va
 			utils.Measure(ctx, MLastRenewFailure, time.Now().Unix())
 			utils.MeasureOne(ctx, MRenewFailures)
 			if err != nil {
+				fmt.Printf("Failed to renew token: %v. Re-attempting login.\n", err)
 				contextutils.LoggerFrom(ctx).Debugf("Failed to renew token: %v. Re-attempting login.", err)
 				return true, nil
 			}
 			// This occurs once the token has reached max TTL.
+			fmt.Printf("Token can no longer be renewed. Re-attempting login.\n")
 			contextutils.LoggerFrom(ctx).Debugf("Token can no longer be renewed. Re-attempting login.")
 			return true, nil
 
@@ -175,6 +180,7 @@ func (r *VaultTokenRenewer) manageTokenLifecycle(ctx context.Context, client *va
 		case renewal := <-watcher.RenewCh():
 			utils.Measure(ctx, MLastRenewSuccess, time.Now().Unix())
 			utils.MeasureOne(ctx, MRenewSuccesses)
+			fmt.Printf("Successfully renewed: %v.\n", renewal)
 			contextutils.LoggerFrom(ctx).Debugf("Successfully renewed: %v.", renewal)
 
 		case <-ctx.Done():

@@ -19,7 +19,7 @@ import (
 
 type NoOpRenewal struct{}
 
-func (*NoOpRenewal) StartRenewal(ctx context.Context, client *vaultapi.Client, secret *vaultapi.Secret) error {
+func (*NoOpRenewal) StartRenewal(ctx context.Context, client *vaultapi.Client, clientAuth ClientAuth, secret *vaultapi.Secret) error {
 	return nil
 }
 

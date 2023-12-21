@@ -43,11 +43,3 @@ func VaultClientForSettings(ctx context.Context, vaultSettings *v1.Settings_Vaul
 	}
 	return vault.NewAuthenticatedClient(ctx, vaultSettings, vaultAuth)
 }
-
-func VaultClientForSettingsWithDefaultAuth(ctx context.Context, vaultSettings *v1.Settings_VaultSecrets) (*api.Client, error) {
-	vaultAuth, err := vault.ClientAuthFactory(vaultSettings)
-	if err != nil {
-		return nil, err
-	}
-	return vault.NewAuthenticatedClient(ctx, vaultSettings, vaultAuth)
-}

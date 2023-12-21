@@ -23,8 +23,9 @@ import (
 type ClientAuth interface {
 	// vault.AuthMethod provides Login(ctx context.Context, client *Client) (*Secret, error)
 	vault.AuthMethod
-	// TokenRenewer provides the function: StartRenewal(ctx context.Context, client *vault.Client, secret *vault.Secret) error
-	TokenRenewer
+	// Start Renewal should be called after a successful login to start the renewal process
+	// This method may have many different types of implementation, from just a noop to spinning up a separate go routine
+	StartRenewal(ctx context.Context, client *vault.Client, secret *vault.Secret) error
 }
 
 var _ ClientAuth = &StaticTokenAuth{}
@@ -58,11 +59,15 @@ func ClientAuthFactory(vaultSettings *v1.Settings_VaultSecrets) (ClientAuth, err
 			return nil, err
 		}
 
-		tokenRenewer := &VaultTokenRenewer{
-			auth:           awsAuth,
-			leaseIncrement: int(authMethod.Aws.GetLeaseIncrement()),
-			getWatcher:     vaultGetWatcher,
-		}
+		tokenRenewer := NewVaultTokenRenewer(&NewVaultTokenRenewerParams{
+			LeaseIncrement: int(authMethod.Aws.GetLeaseIncrement()),
+			Auth:           awsAuth,
+		})
+		// tokenRenewer := &VaultTokenRenewer{
+		// 	auth:           awsAuth,
+		// 	leaseIncrement: int(authMethod.Aws.GetLeaseIncrement()),
+		// 	getWatcher:     vaultGetWatcher,
+		// }
 		return NewRemoteTokenAuth(awsAuth, tokenRenewer, authMethod.Aws), nil
 
 	default:
@@ -138,7 +143,7 @@ type RemoteTokenAuth struct {
 }
 
 func (r *RemoteTokenAuth) StartRenewal(ctx context.Context, client *vault.Client, secret *vault.Secret) error {
-	return r.tokenRenewer.StartRenewal(ctx, client, secret)
+	return r.tokenRenewer.StartRenewal(ctx, client, r, secret)
 }
 
 // Login logs into vault using the provided authMethod
@@ -180,6 +185,7 @@ func (r *RemoteTokenAuth) Login(ctx context.Context, client *vault.Client) (*vau
 func (r *RemoteTokenAuth) loginOnce(ctx context.Context, client *vault.Client) (*vault.Secret, error) {
 	loginResponse, loginErr := r.authMethod.Login(ctx, client)
 	if loginErr != nil {
+		fmt.Println("unable to authenticate to vault")
 		contextutils.LoggerFrom(ctx).Errorf("unable to authenticate to vault: %v", loginErr)
 		utils.Measure(ctx, MLastLoginFailure, time.Now().Unix())
 		utils.MeasureOne(ctx, MLoginFailures)
