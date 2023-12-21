@@ -87,6 +87,7 @@ func (s *StaticTokenAuth) GetToken() string {
 	return s.token
 }
 
+// StartRenewal for StaticTokenAuth is a no-op
 func (*StaticTokenAuth) StartRenewal(ctx context.Context, client *vault.Client, secret *vault.Secret) error {
 	return nil
 }
@@ -137,10 +138,6 @@ type RemoteTokenAuth struct {
 
 func (r *RemoteTokenAuth) StartRenewal(ctx context.Context, client *vault.Client, secret *vault.Secret) error {
 	return r.tokenRenewer.StartRenewal(ctx, client, secret)
-}
-
-func (r *RemoteTokenAuth) GetTokenRenewer() TokenRenewer {
-	return r.tokenRenewer
 }
 
 // Login logs into vault using the provided authMethod

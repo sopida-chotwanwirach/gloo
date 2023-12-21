@@ -21,6 +21,8 @@ type TokenRenewer interface {
 	StartRenewal(ctx context.Context, client *vault.Client, secret *vault.Secret) error
 }
 
+// getWatcherFunc is a function that returns a TokenWatcher and a function to stop the watcher
+// this lets us hide away some go routines while testing
 type getWatcherFunc func(client *vault.Client, secret *vault.Secret, watcherIncrement int) (TokenWatcher, func(), error)
 type VaultTokenRenewer struct {
 	auth           vault.AuthMethod
@@ -29,11 +31,15 @@ type VaultTokenRenewer struct {
 }
 
 type NewVaultTokenRenewerParams struct {
-	Auth           vault.AuthMethod
+	// Auth provides the login method for the vault client to be used when the lease is up
+	Auth vault.AuthMethod
+	// LeaseIncrement is the amount of time in seconds for which the lease should be renewed
 	LeaseIncrement int
-	GetWatcher     getWatcherFunc
+	// A function to provide the watcher and provide a point to inject a test function for testing
+	GetWatcher getWatcherFunc
 }
 
+// NewVaultTokenRenewer returns a new VaultTokenRenewer and will set the default GetWatcher Function
 func NewVaultTokenRenewer(params *NewVaultTokenRenewerParams) *VaultTokenRenewer {
 	if params.GetWatcher == nil {
 		params.GetWatcher = vaultGetWatcher
@@ -46,6 +52,7 @@ func NewVaultTokenRenewer(params *NewVaultTokenRenewerParams) *VaultTokenRenewer
 	}
 }
 
+// StartRenewal wraps the renewal process in a go routine
 func (t *VaultTokenRenewer) StartRenewal(ctx context.Context, client *vault.Client, secret *vault.Secret) error {
 	go t.RenewToken(ctx, client, secret)
 	return nil
