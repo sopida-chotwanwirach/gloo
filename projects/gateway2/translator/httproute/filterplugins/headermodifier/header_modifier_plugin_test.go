@@ -3,9 +3,9 @@ package headermodifier_test
 import (
 	"github.com/golang/protobuf/ptypes/wrappers"
 	. "github.com/onsi/ginkgo/v2"
-	"github.com/solo-io/gloo/projects/gateway2/translator/extensions/filterplugins/api"
-	"github.com/solo-io/gloo/projects/gateway2/translator/extensions/filterplugins/filtertests"
-	"github.com/solo-io/gloo/projects/gateway2/translator/extensions/filterplugins/headermodifier"
+	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins/api"
+	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins/filtertests"
+	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins/headermodifier"
 	v1 "github.com/solo-io/gloo/projects/gloo/pkg/api/v1"
 	"github.com/solo-io/gloo/projects/gloo/pkg/api/v1/options/headers"
 	"github.com/solo-io/solo-kit/pkg/api/external/envoy/api/v2/core"

@@ -4,12 +4,12 @@ import (
 	"fmt"
 
 	"github.com/solo-io/gloo/projects/gateway2/query"
-	"github.com/solo-io/gloo/projects/gateway2/translator/extensions/filterplugins/api"
-	"github.com/solo-io/gloo/projects/gateway2/translator/extensions/filterplugins/mirror"
-	"github.com/solo-io/gloo/projects/gateway2/translator/extensions/filterplugins/redirect"
-	"github.com/solo-io/gloo/projects/gateway2/translator/extensions/filterplugins/urlrewrite"
+	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins/api"
+	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins/headermodifier"
+	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins/mirror"
+	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins/redirect"
+	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins/urlrewrite"
 
-	"github.com/solo-io/gloo/projects/gateway2/translator/extensions/filterplugins/headermodifier"
 	gwv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 

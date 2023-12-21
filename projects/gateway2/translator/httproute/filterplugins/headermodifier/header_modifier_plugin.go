@@ -5,7 +5,7 @@ import (
 
 	"github.com/golang/protobuf/ptypes/wrappers"
 	errors "github.com/rotisserie/eris"
-	"github.com/solo-io/gloo/projects/gateway2/translator/extensions"
+	"github.com/solo-io/gloo/projects/gateway2/translator/plugins"
 	v1 "github.com/solo-io/gloo/projects/gloo/pkg/api/v1"
 	"github.com/solo-io/gloo/projects/gloo/pkg/api/v1/options/headers"
 	"github.com/solo-io/solo-kit/pkg/api/external/envoy/api/v2/core"
@@ -20,7 +20,7 @@ func NewPlugin() *Plugin {
 
 func (p *Plugin) ApplyFilter(
 	ctx context.Context,
-	routeCtx *extensions.RouteContext,
+	routeCtx *plugins.RouteContext,
 	filter gwv1.HTTPRouteFilter,
 	outputRoute *v1.Route,
 ) error {

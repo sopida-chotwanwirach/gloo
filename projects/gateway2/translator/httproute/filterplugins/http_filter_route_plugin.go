@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/solo-io/gloo/projects/gateway2/query"
-	"github.com/solo-io/gloo/projects/gateway2/translator/extensions"
-	"github.com/solo-io/gloo/projects/gateway2/translator/extensions/filterplugins/registry"
+	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins/registry"
+	"github.com/solo-io/gloo/projects/gateway2/translator/plugins"
 	v1 "github.com/solo-io/gloo/projects/gloo/pkg/api/v1"
 )
 
@@ -21,7 +21,7 @@ func NewRouteFilterPlugin(plugins registry.HTTPFilterPluginRegistry) routeFilter
 
 func (x *routeFilterPlugin) ApplyPlugin(
 	ctx context.Context,
-	routeCtx *extensions.RouteContext,
+	routeCtx *plugins.RouteContext,
 	queries query.GatewayQueries,
 	outputRoute *v1.Route,
 ) error {

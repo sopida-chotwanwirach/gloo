@@ -5,7 +5,7 @@ import (
 	"errors"
 	"sort"
 
-	"github.com/solo-io/gloo/projects/gateway2/translator/extensions/routeregistry"
+	"github.com/solo-io/gloo/projects/gateway2/translator/plugins/registry"
 	"github.com/solo-io/gloo/projects/gateway2/translator/sslutils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -26,7 +26,7 @@ import (
 func TranslateListeners(
 	ctx context.Context,
 	queries query.GatewayQueries,
-	routePlugins routeregistry.RoutePluginRegistry,
+	routePlugins registry.RoutePluginRegistry,
 	gateway *gwv1.Gateway,
 	routesForGw query.RoutesForGwResult,
 	reporter reports.Reporter,
@@ -169,7 +169,7 @@ func (ml *mergedListeners) appendHttpsListener(
 
 func (ml *mergedListeners) translateListeners(
 	ctx context.Context,
-	routePlugins routeregistry.RoutePluginRegistry,
+	routePlugins registry.RoutePluginRegistry,
 	queries query.GatewayQueries,
 	reporter reports.Reporter) []*v1.Listener {
 	var listeners []*v1.Listener
@@ -192,7 +192,7 @@ type mergedListener struct {
 
 func (ml *mergedListener) translateListener(
 	ctx context.Context,
-	routePlugins routeregistry.RoutePluginRegistry,
+	routePlugins registry.RoutePluginRegistry,
 	queries query.GatewayQueries,
 	reporter reports.Reporter,
 ) *v1.Listener {
@@ -282,7 +282,7 @@ func (mfc *httpFilterChain) translateHttpFilterChain(
 	ctx context.Context,
 	parentName string,
 	gatewayNamespace string,
-	routePlugins routeregistry.RoutePluginRegistry,
+	routePlugins registry.RoutePluginRegistry,
 	reporter reports.Reporter,
 ) (*v1.AggregateListener_HttpFilterChain, map[string]*v1.VirtualHost) {
 
@@ -352,7 +352,7 @@ type httpsFilterChain struct {
 
 func (mfc *httpsFilterChain) translateHttpsFilterChain(
 	ctx context.Context,
-	routePlugins routeregistry.RoutePluginRegistry,
+	routePlugins registry.RoutePluginRegistry,
 	parentName string,
 	gatewayNamespace string,
 	queries query.GatewayQueries,

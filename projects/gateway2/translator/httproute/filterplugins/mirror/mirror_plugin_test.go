@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	"github.com/onsi/gomega"
-	"github.com/solo-io/gloo/projects/gateway2/translator/extensions"
-	"github.com/solo-io/gloo/projects/gateway2/translator/extensions/filterplugins/mirror"
-	"github.com/solo-io/gloo/projects/gateway2/translator/extensions/filterplugins/mirror/mocks"
+	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins/mirror"
+	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins/mirror/mocks"
+	"github.com/solo-io/gloo/projects/gateway2/translator/plugins"
 	v1 "github.com/solo-io/gloo/projects/gloo/pkg/api/v1"
 	"go.uber.org/mock/gomock"
 	corev1 "k8s.io/api/core/v1"
@@ -22,7 +22,7 @@ func TestSingleMirror(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	queries := mocks.NewMockGatewayQueries(ctrl)
 	rt := &gwv1.HTTPRoute{}
-	routeCtx := &extensions.RouteContext{
+	routeCtx := &plugins.RouteContext{
 		Route: rt,
 	}
 	filter := gwv1.HTTPRouteFilter{

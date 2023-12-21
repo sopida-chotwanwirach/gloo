@@ -7,8 +7,8 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	. "github.com/onsi/gomega"
-	"github.com/solo-io/gloo/projects/gateway2/translator/extensions"
-	"github.com/solo-io/gloo/projects/gateway2/translator/extensions/filterplugins/api"
+	"github.com/solo-io/gloo/projects/gateway2/translator/httproute/filterplugins/api"
+	"github.com/solo-io/gloo/projects/gateway2/translator/plugins"
 	"github.com/solo-io/gloo/projects/gateway2/translator/testutils"
 
 	v1 "github.com/solo-io/gloo/projects/gloo/pkg/api/v1"
@@ -46,7 +46,7 @@ func assertExpectedRoute(
 	match *gwv1.HTTPRouteMatch,
 	logActual bool,
 ) {
-	rtCtx := &extensions.RouteContext{
+	rtCtx := &plugins.RouteContext{
 		Route:    &gwv1.HTTPRoute{},
 		Rule:     nil,
 		Reporter: nil,

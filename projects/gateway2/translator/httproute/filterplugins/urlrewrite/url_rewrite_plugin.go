@@ -4,7 +4,7 @@ import (
 	"context"
 
 	errors "github.com/rotisserie/eris"
-	"github.com/solo-io/gloo/projects/gateway2/translator/extensions"
+	"github.com/solo-io/gloo/projects/gateway2/translator/plugins"
 	matcherv3 "github.com/solo-io/gloo/projects/gloo/pkg/api/external/envoy/type/matcher/v3"
 	v1 "github.com/solo-io/gloo/projects/gloo/pkg/api/v1"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -20,7 +20,7 @@ func NewPlugin() *Plugin {
 
 func (p *Plugin) ApplyFilter(
 	ctx context.Context,
-	routeCtx *extensions.RouteContext,
+	routeCtx *plugins.RouteContext,
 	filter gwv1.HTTPRouteFilter,
 	outputRoute *v1.Route,
 ) error {

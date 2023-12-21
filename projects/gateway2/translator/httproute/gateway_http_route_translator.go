@@ -7,8 +7,8 @@ import (
 	"github.com/golang/protobuf/ptypes/wrappers"
 	"github.com/solo-io/gloo/projects/gateway2/query"
 	"github.com/solo-io/gloo/projects/gateway2/reports"
-	"github.com/solo-io/gloo/projects/gateway2/translator/extensions"
-	"github.com/solo-io/gloo/projects/gateway2/translator/extensions/routeregistry"
+	"github.com/solo-io/gloo/projects/gateway2/translator/plugins"
+	"github.com/solo-io/gloo/projects/gateway2/translator/plugins/registry"
 	v1 "github.com/solo-io/gloo/projects/gloo/pkg/api/v1"
 
 	"github.com/solo-io/gloo/projects/gloo/pkg/api/v1/core/matchers"
@@ -18,7 +18,7 @@ import (
 
 func TranslateGatewayHTTPRouteRules(
 	ctx context.Context,
-	routePlugins routeregistry.RoutePluginRegistry,
+	routePlugins registry.RoutePluginRegistry,
 	queries query.GatewayQueries,
 	route gwv1.HTTPRoute,
 	reporter reports.ParentRefReporter,
@@ -55,7 +55,7 @@ func TranslateGatewayHTTPRouteRules(
 
 func translateGatewayHTTPRouteRule(
 	ctx context.Context,
-	routePlugins routeregistry.RoutePluginRegistry,
+	routePlugins registry.RoutePluginRegistry,
 	queries query.GatewayQueries,
 	gwroute *gwv1.HTTPRoute,
 	rule gwv1.HTTPRouteRule,
@@ -78,7 +78,7 @@ func translateGatewayHTTPRouteRule(
 			)
 		}
 
-		rtCtx := &extensions.RouteContext{
+		rtCtx := &plugins.RouteContext{
 			Route:    gwroute,
 			Rule:     &rule,
 			Match:    &match,

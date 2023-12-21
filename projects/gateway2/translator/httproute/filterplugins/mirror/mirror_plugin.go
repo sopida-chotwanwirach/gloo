@@ -5,7 +5,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/solo-io/gloo/projects/gateway2/query"
-	"github.com/solo-io/gloo/projects/gateway2/translator/extensions"
+	"github.com/solo-io/gloo/projects/gateway2/translator/plugins"
 	v1 "github.com/solo-io/gloo/projects/gloo/pkg/api/v1"
 	"github.com/solo-io/gloo/projects/gloo/pkg/api/v1/options/shadowing"
 	"github.com/solo-io/solo-kit/pkg/api/v1/resources/core"
@@ -24,7 +24,7 @@ func NewPlugin(queries query.GatewayQueries) *plugin {
 
 func (p *plugin) ApplyFilter(
 	ctx context.Context,
-	routeCtx *extensions.RouteContext,
+	routeCtx *plugins.RouteContext,
 	filter gwv1.HTTPRouteFilter,
 	outputRoute *v1.Route,
 ) error {
