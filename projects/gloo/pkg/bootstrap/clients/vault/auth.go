@@ -63,11 +63,7 @@ func ClientAuthFactory(vaultSettings *v1.Settings_VaultSecrets) (ClientAuth, err
 			LeaseIncrement: int(authMethod.Aws.GetLeaseIncrement()),
 			Auth:           awsAuth,
 		})
-		// tokenRenewer := &VaultTokenRenewer{
-		// 	auth:           awsAuth,
-		// 	leaseIncrement: int(authMethod.Aws.GetLeaseIncrement()),
-		// 	getWatcher:     vaultGetWatcher,
-		// }
+
 		return NewRemoteTokenAuth(awsAuth, tokenRenewer, authMethod.Aws), nil
 
 	default:
@@ -183,7 +179,9 @@ func (r *RemoteTokenAuth) Login(ctx context.Context, client *vault.Client) (*vau
 }
 
 func (r *RemoteTokenAuth) loginOnce(ctx context.Context, client *vault.Client) (*vault.Secret, error) {
+	fmt.Print("In loginOnce\n")
 	loginResponse, loginErr := r.authMethod.Login(ctx, client)
+	fmt.Printf("loginResponse: %+v, loginErr: %+v\n", loginResponse, loginErr)
 	if loginErr != nil {
 		fmt.Println("unable to authenticate to vault")
 		contextutils.LoggerFrom(ctx).Errorf("unable to authenticate to vault: %v", loginErr)

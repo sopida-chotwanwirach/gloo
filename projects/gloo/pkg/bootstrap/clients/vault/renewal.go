@@ -147,6 +147,7 @@ func (r *VaultTokenRenewer) manageTokenLifecycle(ctx context.Context, client *va
 		return retryLogin, nil
 	}
 
+	fmt.Println("watcherIncrement is ", watcherIncrement)
 	watcher, stop, err := r.getWatcher(client, secret, watcherIncrement)
 
 	// The only errors the constructor can return are if the input parameter is nil or if the secret is nil, and we

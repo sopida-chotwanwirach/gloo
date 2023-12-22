@@ -23,13 +23,14 @@ const (
 	// https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html
 	// Please note that although this is used as a "role" in vault (the value is written to "auth/aws/role/vault-role")
 	// it is actually an aws user so if running locally *user* and not the role that gets created during manual setup
-	vaultAwsRole   = "arn:aws:iam::802411188784:user/gloo-edge-e2e-user"
+	vaultAwsRole = "arn:aws:iam::802411188784:user/gloo-edge-e2e-user"
+	//vaultAwsRole   = "arn:aws:iam::802411188784:user/sheidkamp"
 	vaultAwsRegion = "us-east-1"
 
 	vaultRole = "vault-role"
 )
 
-var _ = FDescribe("Vault Secret Store (AWS Auth)", decorators.Vault, func() {
+var _ = Describe("Vault Secret Store (AWS Auth)", decorators.Vault, func() {
 
 	var (
 		testContext         *e2e.TestContextWithVault
@@ -102,13 +103,13 @@ var _ = FDescribe("Vault Secret Store (AWS Auth)", decorators.Vault, func() {
 			}
 		})
 
-		It("can read secret using resource client initially and after renewal", func() {
+		FIt("can read secret using resource client", func() {
 			var (
 				secret *gloov1.Secret
 				err    error
 			)
 
-			Eventually(func(g Gomega) {
+			getSecret := func(g Gomega) {
 				secret, err = testContext.TestClients().SecretClient.Read(
 					oauthSecret.GetMetadata().GetNamespace(),
 					oauthSecret.GetMetadata().GetName(),
@@ -117,23 +118,14 @@ var _ = FDescribe("Vault Secret Store (AWS Auth)", decorators.Vault, func() {
 					})
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(secret.GetOauth().GetClientSecret()).To(Equal("test"))
-			}, "5s", ".5s").Should(Succeed())
+			}
 
-			// Sleep and try again
-			time.Sleep(20 * time.Second)
-
+			Eventually(getSecret, "5s", ".5s").Should(Succeed())
+			// Sleep and try again. There is a 10s ttl on the lease, so this should fail
+			time.Sleep(12 * time.Second)
 			// We are setting the ttl of the secret lease to 10 seconds, so this would fail without the goroutine which renews the lease.
 			// To see this fail, comment out the call to the 'renewToken' goroutine in pkg/bootstrap/clients/vault.go
-			Eventually(func(g Gomega) {
-				secret, err := testContext.TestClients().SecretClient.Read(
-					oauthSecret.GetMetadata().GetNamespace(),
-					oauthSecret.GetMetadata().GetName(),
-					clients.ReadOpts{
-						Ctx: testContext.Ctx(),
-					})
-				g.Expect(err).NotTo(HaveOccurred())
-				g.Expect(secret.GetOauth().GetClientSecret()).To(Equal("test"))
-			}, "5s", ".5s").Should(Succeed())
+			Eventually(getSecret, "5s", ".5s").Should(Succeed())
 		})
 
 		It("can pick up new secrets created by vault client ", func() {

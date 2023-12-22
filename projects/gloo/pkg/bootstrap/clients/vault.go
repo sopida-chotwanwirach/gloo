@@ -16,19 +16,18 @@ import (
 // The DefaultPathPrefix may be overridden to allow for non-standard vault mount paths
 const DefaultPathPrefix = "secret"
 
-type VaultClientInitFunc func() *api.Client
+type VaultClientInitFunc func(ctx context.Context) *api.Client
 
-// NoopVaultClientInitFunc returns the provided client without any modification
 func NoopVaultClientInitFunc(c *api.Client) VaultClientInitFunc {
-	return func() *api.Client {
+	return func(_ context.Context) *api.Client {
 		return c
 	}
 }
 
 // NewVaultSecretClientFactory consumes a vault client along with a set of basic configurations for retrieving info with the client
-func NewVaultSecretClientFactory(clientInit VaultClientInitFunc, pathPrefix, rootKey string) factory.ResourceClientFactory {
+func NewVaultSecretClientFactory(ctx context.Context, clientInit VaultClientInitFunc, pathPrefix, rootKey string) factory.ResourceClientFactory {
 	return &factory.VaultSecretClientFactory{
-		Vault:      clientInit(),
+		Vault:      clientInit(ctx),
 		RootKey:    rootKey,
 		PathPrefix: pathPrefix,
 	}
