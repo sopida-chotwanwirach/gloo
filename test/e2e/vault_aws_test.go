@@ -23,8 +23,7 @@ const (
 	// https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-profiles.html
 	// Please note that although this is used as a "role" in vault (the value is written to "auth/aws/role/vault-role")
 	// it is actually an aws user so if running locally *user* and not the role that gets created during manual setup
-	vaultAwsRole = "arn:aws:iam::802411188784:user/gloo-edge-e2e-user"
-	//vaultAwsRole   = "arn:aws:iam::802411188784:user/sheidkamp"
+	vaultAwsRole   = "arn:aws:iam::802411188784:user/gloo-edge-e2e-user"
 	vaultAwsRegion = "us-east-1"
 
 	vaultRole = "vault-role"
@@ -116,16 +115,17 @@ var _ = Describe("Vault Secret Store (AWS Auth)", decorators.Vault, func() {
 					clients.ReadOpts{
 						Ctx: testContext.Ctx(),
 					})
-				g.Expect(err).NotTo(HaveOccurred())
-				g.Expect(secret.GetOauth().GetClientSecret()).To(Equal("test"))
+				g.ExpectWithOffset(1, err).NotTo(HaveOccurred())
+				g.ExpectWithOffset(1, secret.GetOauth().GetClientSecret()).To(Equal("test"))
 			}
 
 			Eventually(getSecret, "5s", ".5s").Should(Succeed())
 			// Sleep and try again. There is a 10s ttl on the lease, so this should fail
-			time.Sleep(11 * time.Second)
+			time.Sleep(12 * time.Second)
 			// We are setting the ttl of the secret lease to 10 seconds, so this would fail without the goroutine which renews the lease.
 			// To see this fail, comment out the call to the 'renewToken' goroutine in pkg/bootstrap/clients/vault.go
-			//Eventually(getSecret, "5s", ".5s").Should(Succeed())
+			// Don't need the "Eventually" here, because everything is already up and running
+			getSecret(Default)
 		})
 
 		It("can pick up new secrets created by vault client ", func() {

@@ -2,7 +2,6 @@ package vault
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	errors "github.com/rotisserie/eris"
@@ -142,7 +141,7 @@ func (r *RemoteTokenAuth) StartRenewal(ctx context.Context, client *vault.Client
 	return r.tokenRenewer.StartRenewal(ctx, client, r, secret)
 }
 
-// Login logs into vault using the provided authMethod
+// Login wraps the low-level login with retry logic
 func (r *RemoteTokenAuth) Login(ctx context.Context, client *vault.Client) (*vault.Secret, error) {
 	var (
 		loginResponse *vault.Secret
@@ -179,11 +178,8 @@ func (r *RemoteTokenAuth) Login(ctx context.Context, client *vault.Client) (*vau
 }
 
 func (r *RemoteTokenAuth) loginOnce(ctx context.Context, client *vault.Client) (*vault.Secret, error) {
-	fmt.Print("In loginOnce\n")
 	loginResponse, loginErr := r.authMethod.Login(ctx, client)
-	fmt.Printf("loginResponse: %+v, loginErr: %+v\n", loginResponse, loginErr)
 	if loginErr != nil {
-		fmt.Println("unable to authenticate to vault")
 		contextutils.LoggerFrom(ctx).Errorf("unable to authenticate to vault: %v", loginErr)
 		utils.Measure(ctx, MLastLoginFailure, time.Now().Unix())
 		utils.MeasureOne(ctx, MLoginFailures)
@@ -197,7 +193,6 @@ func (r *RemoteTokenAuth) loginOnce(ctx context.Context, client *vault.Client) (
 		return nil, ErrNoAuthInfo
 	}
 
-	fmt.Println("successfully authenticated to vault")
 	contextutils.LoggerFrom(ctx).Debugf("successfully authenticated to vault %v", loginResponse)
 	utils.Measure(ctx, MLastLoginSuccess, time.Now().Unix())
 	utils.MeasureOne(ctx, MLoginSuccesses)

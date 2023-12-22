@@ -51,7 +51,8 @@ var _ = Describe("Vault Token Renewal", func() {
 		renewableSecret = func() *vault.Secret {
 			return &vault.Secret{
 				Auth: &vault.SecretAuth{
-					Renewable: true,
+					Renewable:   true,
+					ClientToken: "test-token-renewable",
 				},
 				LeaseDuration: 100,
 			}
@@ -60,7 +61,8 @@ var _ = Describe("Vault Token Renewal", func() {
 		nonRenewableSecret = func() *vault.Secret {
 			return &vault.Secret{
 				Auth: &vault.SecretAuth{
-					Renewable: false,
+					Renewable:   false,
+					ClientToken: "test-token-nonrenewable",
 				},
 				LeaseDuration: 100,
 			}
@@ -92,8 +94,14 @@ var _ = Describe("Vault Token Renewal", func() {
 			ctrl = gomock.NewController(GinkgoT())
 			internalAuthMethod := mocks.NewMockAuthMethod(ctrl)
 			internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).Return(secret, nil).AnyTimes()
+			client = &vault.Client{}
 
-			clientAuth = NewRemoteTokenAuth(internalAuthMethod, &NoOpRenewal{}, &v1.Settings_VaultAwsAuth{}, retry.Attempts(3))
+			clientAuth = NewRemoteTokenAuth(
+				internalAuthMethod,
+				&NoOpRenewal{},
+				&v1.Settings_VaultAwsAuth{},
+				retry.Attempts(3),
+			)
 
 			renewer = NewVaultTokenRenewer(&NewVaultTokenRenewerParams{
 				Auth:           clientAuth,
@@ -111,7 +119,7 @@ var _ = Describe("Vault Token Renewal", func() {
 				doneCh <- eris.Errorf("Renewal error")
 				time.Sleep(sleepTime)
 				renewCh <- &vault.RenewOutput{}
-				time.Sleep(1 * time.Second)
+				time.Sleep(sleepTime)
 				cancel()
 			}()
 
@@ -132,6 +140,7 @@ var _ = Describe("Vault Token Renewal", func() {
 		BeforeEach(func() {
 			ctrl = gomock.NewController(GinkgoT())
 			internalAuthMethod := mocks.NewMockAuthMethod(ctrl)
+			client = &vault.Client{}
 
 			loginCount := 0
 			// Fail every other login
@@ -185,6 +194,7 @@ var _ = Describe("Vault Token Renewal", func() {
 		BeforeEach(func() {
 			ctrl = gomock.NewController(GinkgoT())
 			internalAuthMethod := mocks.NewMockAuthMethod(ctrl)
+			client = &vault.Client{}
 
 			internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).Return(nil, errMock).AnyTimes()
 
@@ -231,6 +241,7 @@ var _ = Describe("Vault Token Renewal", func() {
 		BeforeEach(func() {
 			ctrl = gomock.NewController(GinkgoT())
 			internalAuthMethod := mocks.NewMockAuthMethod(ctrl)
+			client = &vault.Client{}
 
 			gomock.InOrder(
 				internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).Times(1).Return(nonRenewableSecret(), nil),
@@ -243,7 +254,7 @@ var _ = Describe("Vault Token Renewal", func() {
 				Auth:                     clientAuth,
 				LeaseIncrement:           1,
 				GetWatcher:               getTestWatcher,
-				RetryOnNonRenewableSleep: 5, // Pass this in so we don't have to wait for the default
+				RetryOnNonRenewableSleep: 1, // Pass this in so we don't have to wait for the default
 			})
 		})
 
@@ -259,7 +270,7 @@ var _ = Describe("Vault Token Renewal", func() {
 			}()
 
 			renewer.RenewToken(ctx, client, clientAuth, nonRenewableSecret())
-
+			//time.Sleep(1 * time.Second)
 			// The login never fails, it just returns an non-renewable secret
 			assertions.ExpectStatLastValueMatches(MLastLoginFailure, BeZero())
 			assertions.ExpectStatLastValueMatches(MLastLoginSuccess, Not(BeZero()))
