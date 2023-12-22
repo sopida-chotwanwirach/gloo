@@ -240,9 +240,10 @@ var _ = Describe("Vault Token Renewal", func() {
 			clientAuth = NewRemoteTokenAuth(internalAuthMethod, &NoOpRenewal{}, &v1.Settings_VaultAwsAuth{}, retry.Attempts(3))
 
 			renewer = NewVaultTokenRenewer(&NewVaultTokenRenewerParams{
-				Auth:           clientAuth,
-				LeaseIncrement: 1,
-				GetWatcher:     getTestWatcher,
+				Auth:                     clientAuth,
+				LeaseIncrement:           1,
+				GetWatcher:               getTestWatcher,
+				RetryOnNonRenewableSleep: 5, // Pass this in so we don't have to wait for the default
 			})
 		})
 

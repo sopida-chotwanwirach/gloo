@@ -26,9 +26,10 @@ var _ TokenRenewer = &VaultTokenRenewer{}
 // this lets us hide away some go routines while testing
 type getWatcherFunc func(client *vault.Client, secret *vault.Secret, watcherIncrement int) (TokenWatcher, func(), error)
 type VaultTokenRenewer struct {
-	auth           vault.AuthMethod
-	leaseIncrement int
-	getWatcher     getWatcherFunc
+	auth                     vault.AuthMethod
+	leaseIncrement           int
+	getWatcher               getWatcherFunc
+	retryOnNonRenewableSleep int
 }
 
 type NewVaultTokenRenewerParams struct {
@@ -37,13 +38,19 @@ type NewVaultTokenRenewerParams struct {
 	// LeaseIncrement is the amount of time in seconds for which the lease should be renewed
 	LeaseIncrement int
 	// A function to provide the watcher and provide a point to inject a test function for testing
-	GetWatcher getWatcherFunc
+	GetWatcher               getWatcherFunc
+	RetryOnNonRenewableSleep int
 }
 
 // NewVaultTokenRenewer returns a new VaultTokenRenewer and will set the default GetWatcher Function
 func NewVaultTokenRenewer(params *NewVaultTokenRenewerParams) *VaultTokenRenewer {
 	if params.GetWatcher == nil {
 		params.GetWatcher = vaultGetWatcher
+	}
+
+	// This is the amount of time to sleep before retrying if the token is not renewable
+	if params.RetryOnNonRenewableSleep == 0 {
+		params.RetryOnNonRenewableSleep = 60
 	}
 
 	return &VaultTokenRenewer{
@@ -71,7 +78,11 @@ func (r *VaultTokenRenewer) RenewToken(ctx context.Context, client *vault.Client
 		if !haveValidSecret {
 			fmt.Printf("Logging in again with %+v \n", clientAuth)
 			secret, err = clientAuth.Login(ctx, client) //vi.loginWithRetry(ctx, client, awsAuth, nil)
-			fmt.Printf("Login returned %+v, %+v \n", secret, err)
+			if err != nil {
+				fmt.Printf("Error %v\n", err)
+			} else {
+				fmt.Printf("Sucessful login")
+			}
 		} else {
 			haveValidSecret = false
 		}
@@ -131,16 +142,11 @@ func (r *VaultTokenRenewer) manageTokenLifecycle(ctx context.Context, client *va
 	if renewable, err := secret.TokenIsRenewable(); !renewable || err != nil {
 		// If the token is not renewable and we immediately try to renew it, we will just keep trying and hitting the same error
 		// So we need to throw in a sleep
-		retryOnNonRenewableSleep := watcherIncrement
-		defaultRetry := 60
-		if retryOnNonRenewableSleep == 0 {
-			retryOnNonRenewableSleep = defaultRetry
-		}
 
-		contextutils.LoggerFrom(ctx).Errorw("Token is not configured to be renewable.", "retry", retryOnNonRenewableSleep, "Error", err, "TokenIsRenewable", renewable)
+		contextutils.LoggerFrom(ctx).Errorw("Token is not configured to be renewable.", "retry", r.retryOnNonRenewableSleep, "Error", err, "TokenIsRenewable", renewable)
 
 		// The units don't make sense but this is the way the docs recommend doing it
-		time.Sleep(time.Duration(retryOnNonRenewableSleep) * time.Second)
+		time.Sleep(time.Duration(r.retryOnNonRenewableSleep) * time.Second)
 
 		// If we are caught in this loop, we don't get to the code that checks the state of the context, so we need to check it here
 		retryLogin := ctx.Err() == nil
