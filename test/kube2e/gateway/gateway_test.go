@@ -65,7 +65,7 @@ import (
 	"github.com/solo-io/gloo/projects/gloo/pkg/translator"
 	"github.com/solo-io/gloo/test/helpers"
 	"github.com/solo-io/gloo/test/kube2e"
-	"github.com/solo-io/k8s-utils/testutils/helper"
+	"github.com/solo-io/gloo/test/kube2e/helper"
 	"github.com/solo-io/solo-kit/pkg/api/v1/clients"
 	"github.com/solo-io/solo-kit/pkg/api/v1/resources/core"
 	appsv1 "k8s.io/api/apps/v1"
@@ -390,7 +390,7 @@ var _ = Describe("Kube2e: gateway", func() {
 				httpEcho, err = helper.NewEchoHttp(testHelper.InstallNamespace)
 				Expect(err).NotTo(HaveOccurred())
 
-				err = httpEcho.Deploy(2 * time.Minute)
+				err = httpEcho.DeployResources(2 * time.Minute)
 				Expect(err).NotTo(HaveOccurred())
 
 				httpEchoDestination := &gloov1.Destination{
@@ -418,7 +418,7 @@ var _ = Describe("Kube2e: gateway", func() {
 					settings.Linkerd = true
 				}, testHelper.InstallNamespace)
 
-				err := httpEcho.Terminate()
+				err := httpEcho.TerminatePod()
 				Expect(err).NotTo(HaveOccurred())
 
 				// TODO: Terminate() should do this as part of its cleanup
@@ -1265,7 +1265,7 @@ var _ = Describe("Kube2e: gateway", func() {
 			httpEcho, err = helper.NewEchoHttp(testHelper.InstallNamespace)
 			Expect(err).NotTo(HaveOccurred())
 
-			err = httpEcho.Deploy(time.Minute)
+			err = httpEcho.DeployResources(time.Minute)
 			Expect(err).NotTo(HaveOccurred())
 
 			gwSvc, err := resourceClientset.KubeClients().CoreV1().Services(testHelper.InstallNamespace).Get(ctx, gatewayProxy, metav1.GetOptions{})
@@ -1305,7 +1305,7 @@ var _ = Describe("Kube2e: gateway", func() {
 			_, err = resourceClientset.KubeClients().CoreV1().Services(testHelper.InstallNamespace).Update(ctx, gwSvc, metav1.UpdateOptions{})
 			Expect(err).NotTo(HaveOccurred())
 
-			err = httpEcho.Terminate()
+			err = httpEcho.TerminatePod()
 			Expect(err).NotTo(HaveOccurred())
 
 			err = resourceClientset.KubeClients().CoreV1().Services(testHelper.InstallNamespace).Delete(ctx, helper.HttpEchoName, metav1.DeleteOptions{})
