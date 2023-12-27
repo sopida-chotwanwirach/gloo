@@ -9,7 +9,6 @@ import (
 	vault "github.com/hashicorp/vault/api"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/rotisserie/eris"
 	errors "github.com/rotisserie/eris"
 
 	. "github.com/solo-io/gloo/projects/gloo/pkg/bootstrap/clients/vault"
@@ -40,7 +39,7 @@ var _ = Describe("Vault Token Renewal", func() {
 
 		clientAuth ClientAuth
 		ctrl       *gomock.Controller
-		errMock    = eris.New("mocked error message")
+		errMock    = errors.New("mocked error message")
 		tw         TokenWatcher
 
 		doneCh  chan error
@@ -103,7 +102,6 @@ var _ = Describe("Vault Token Renewal", func() {
 			clientAuth = NewRemoteTokenAuth(internalAuthMethod, &NoOpRenewal{}, retry.Attempts(3))
 
 			renewer = NewVaultTokenRenewer(&NewVaultTokenRenewerParams{
-				Auth:           clientAuth,
 				LeaseIncrement: 1,
 				GetWatcher:     getTestWatcher,
 			})
@@ -157,7 +155,6 @@ var _ = Describe("Vault Token Renewal", func() {
 			clientAuth = NewRemoteTokenAuth(internalAuthMethod, &NoOpRenewal{}, retry.Attempts(3))
 
 			renewer = NewVaultTokenRenewer(&NewVaultTokenRenewerParams{
-				Auth:           clientAuth,
 				LeaseIncrement: 1,
 				GetWatcher:     getTestWatcher,
 			})
@@ -202,7 +199,6 @@ var _ = Describe("Vault Token Renewal", func() {
 			clientAuth = NewRemoteTokenAuth(internalAuthMethod, &NoOpRenewal{}, retry.Attempts(3))
 
 			renewer = NewVaultTokenRenewer(&NewVaultTokenRenewerParams{
-				Auth:           clientAuth,
 				LeaseIncrement: 1,
 				GetWatcher:     getTestWatcher,
 			})
@@ -253,7 +249,6 @@ var _ = Describe("Vault Token Renewal", func() {
 			clientAuth = NewRemoteTokenAuth(internalAuthMethod, &NoOpRenewal{}, retry.Attempts(3))
 
 			renewer = NewVaultTokenRenewer(&NewVaultTokenRenewerParams{
-				Auth:                     clientAuth,
 				LeaseIncrement:           1,
 				GetWatcher:               getTestWatcher,
 				RetryOnNonRenewableSleep: 1, // Pass this in so we don't have to wait for the default
@@ -264,8 +259,8 @@ var _ = Describe("Vault Token Renewal", func() {
 			// Run through the basic channel output and look at the metrics
 			go func() {
 				time.Sleep(sleepTime)
-				doneCh <- eris.Errorf("Renewal error") // Force renewal
-				time.Sleep(2 * time.Second)            // Give it time to retry the login
+				doneCh <- errors.Errorf("Renewal error") // Force renewal
+				time.Sleep(2 * time.Second)              // Give it time to retry the login
 				renewCh <- &vault.RenewOutput{}
 				time.Sleep(sleepTime)
 				cancel()
@@ -288,7 +283,7 @@ var _ = Describe("Vault Token Renewal", func() {
 		})
 	})
 
-	When("nitializing the watcher returns an error", func() {
+	When("Initializing the watcher returns an error", func() {
 		BeforeEach(func() {
 			ctrl = gomock.NewController(GinkgoT())
 			internalAuthMethod := mocks.NewMockAuthMethod(ctrl)
@@ -298,14 +293,13 @@ var _ = Describe("Vault Token Renewal", func() {
 			clientAuth = NewRemoteTokenAuth(internalAuthMethod, &NoOpRenewal{}, retry.Attempts(3))
 
 			renewer = NewVaultTokenRenewer(&NewVaultTokenRenewerParams{
-				Auth:           clientAuth,
 				LeaseIncrement: 1,
 				GetWatcher:     getErrorWatcher,
 			})
 
 		})
 
-		It("should return an error", func() {
+		It("Renewal should return an error", func() {
 			err := renewer.RenewToken(ctx, client, clientAuth, renewableSecret())
 			Expect(err).To(MatchError(ErrInitializeWatcher(errMock)))
 

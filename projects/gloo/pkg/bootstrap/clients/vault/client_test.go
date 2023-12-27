@@ -19,8 +19,7 @@ import (
 
 type NoOpRenewal struct{}
 
-func (*NoOpRenewal) ManageRenewal(ctx context.Context, client *vaultapi.Client, clientAuth ClientAuth, secret *vaultapi.Secret) error {
-	return nil
+func (*NoOpRenewal) ManageTokenRenewal(ctx context.Context, client *vaultapi.Client, clientAuth ClientAuth, secret *vaultapi.Secret) {
 }
 
 var _ = Describe("ClientAuth", func() {
@@ -52,9 +51,6 @@ var _ = Describe("ClientAuth", func() {
 
 	AfterEach(func() {
 		cancel()
-		// Give time for all go rountines to exit
-		// TODO - replace with eventually of some sort?
-		//time.Sleep(3 * time.Second)
 	})
 
 	Context("Access Token Auth", func() {
@@ -82,8 +78,8 @@ var _ = Describe("ClientAuth", func() {
 				assertions.ExpectStatSumMatches(MLoginFailures, Equal(1))
 			})
 
-			It("ManageRenewal should return nil", func() {
-				err := clientAuth.ManageRenewal(ctx, client, nil)
+			It("ManageTokenRenewal should return nil", func() {
+				err := clientAuth.ManageTokenRenewal(ctx, client, nil)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -113,8 +109,8 @@ var _ = Describe("ClientAuth", func() {
 				assertions.ExpectStatSumMatches(MLoginSuccesses, Equal(1))
 			})
 
-			It("ManageRenewal should return nil", func() {
-				err := clientAuth.ManageRenewal(ctx, client, nil)
+			It("ManageTokenRenewal should return nil", func() {
+				err := clientAuth.ManageTokenRenewal(ctx, client, nil)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -155,9 +151,6 @@ var _ = Describe("ClientAuth", func() {
 			)
 
 			BeforeEach(func() {
-				client = nil
-				err = nil
-
 				secret := &vaultapi.Secret{
 					Auth: &vaultapi.SecretAuth{
 						ClientToken: "a-client-token",

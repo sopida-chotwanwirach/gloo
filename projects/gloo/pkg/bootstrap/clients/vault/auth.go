@@ -22,9 +22,9 @@ import (
 type ClientAuth interface {
 	// vault.AuthMethod provides Login(ctx context.Context, client *Client) (*Secret, error)
 	vault.AuthMethod
-	// ManageRenewal should be called after a successful login to start the renewal process
+	// ManageTokenRenewal should be called after a successful login to start the renewal process
 	// This method may have many different types of implementation, from just a noop to spinning up a separate go routine
-	ManageRenewal(ctx context.Context, client *vault.Client, secret *vault.Secret) error
+	ManageTokenRenewal(ctx context.Context, client *vault.Client, secret *vault.Secret) error
 }
 
 var _ ClientAuth = &StaticTokenAuth{}
@@ -60,7 +60,6 @@ func ClientAuthFactory(vaultSettings *v1.Settings_VaultSecrets) (ClientAuth, err
 
 		tokenRenewer := NewVaultTokenRenewer(&NewVaultTokenRenewerParams{
 			LeaseIncrement: int(authMethod.Aws.GetLeaseIncrement()),
-			Auth:           awsAuth,
 		})
 
 		return NewRemoteTokenAuth(awsAuth, tokenRenewer), nil
@@ -88,8 +87,8 @@ func (s *StaticTokenAuth) GetToken() string {
 	return s.token
 }
 
-// ManageRenewal for StaticTokenAuth is a no-op
-func (*StaticTokenAuth) ManageRenewal(ctx context.Context, client *vault.Client, secret *vault.Secret) error {
+// ManageTokenRenewal for StaticTokenAuth is a no-op
+func (*StaticTokenAuth) ManageTokenRenewal(ctx context.Context, client *vault.Client, secret *vault.Secret) error {
 	return nil
 }
 
@@ -137,8 +136,9 @@ type RemoteTokenAuth struct {
 	loginRetryOptions []retry.Option
 }
 
-func (r *RemoteTokenAuth) ManageRenewal(ctx context.Context, client *vault.Client, secret *vault.Secret) error {
-	return r.tokenRenewer.ManageRenewal(ctx, client, r, secret)
+func (r *RemoteTokenAuth) ManageTokenRenewal(ctx context.Context, client *vault.Client, secret *vault.Secret) error {
+	r.tokenRenewer.ManageTokenRenewal(ctx, client, r, secret)
+	return nil
 }
 
 // Login wraps the low-level login with retry logic
