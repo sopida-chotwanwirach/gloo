@@ -184,7 +184,6 @@ func (r *RemoteTokenAuth) loginOnce(ctx context.Context, client *vault.Client) (
 	loginResponse, loginErr := r.authMethod.Login(ctx, client)
 	if loginErr != nil {
 		contextutils.LoggerFrom(ctx).Errorf("unable to authenticate to vault: %v", loginErr)
-		fmt.Println("AWSTEST Login Failure!", time.Now().Unix())
 		utils.Measure(ctx, MLastLoginFailure, time.Now().Unix())
 		utils.MeasureOne(ctx, MLoginFailures)
 		return nil, ErrVaultAuthentication(loginErr)
@@ -192,7 +191,6 @@ func (r *RemoteTokenAuth) loginOnce(ctx context.Context, client *vault.Client) (
 
 	if loginResponse == nil {
 		contextutils.LoggerFrom(ctx).Error(ErrNoAuthInfo)
-		fmt.Println("AWSTEST Login Failure (nil)!", time.Now().Unix())
 		utils.Measure(ctx, MLastLoginFailure, time.Now().Unix())
 		utils.MeasureOne(ctx, MLoginFailures)
 		return nil, ErrNoAuthInfo
