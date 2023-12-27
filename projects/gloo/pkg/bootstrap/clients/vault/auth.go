@@ -22,9 +22,9 @@ import (
 type ClientAuth interface {
 	// vault.AuthMethod provides Login(ctx context.Context, client *Client) (*Secret, error)
 	vault.AuthMethod
-	// Start Renewal should be called after a successful login to start the renewal process
+	// ManageRenewal should be called after a successful login to start the renewal process
 	// This method may have many different types of implementation, from just a noop to spinning up a separate go routine
-	StartRenewal(ctx context.Context, client *vault.Client, secret *vault.Secret) error
+	ManageRenewal(ctx context.Context, client *vault.Client, secret *vault.Secret) error
 }
 
 var _ ClientAuth = &StaticTokenAuth{}
@@ -63,7 +63,7 @@ func ClientAuthFactory(vaultSettings *v1.Settings_VaultSecrets) (ClientAuth, err
 			Auth:           awsAuth,
 		})
 
-		return NewRemoteTokenAuth(awsAuth, tokenRenewer, authMethod.Aws), nil
+		return NewRemoteTokenAuth(awsAuth, tokenRenewer), nil
 
 	default:
 		// AuthMethod is the preferred API to define the policy for authenticating to vault
@@ -88,8 +88,8 @@ func (s *StaticTokenAuth) GetToken() string {
 	return s.token
 }
 
-// StartRenewal for StaticTokenAuth is a no-op
-func (*StaticTokenAuth) StartRenewal(ctx context.Context, client *vault.Client, secret *vault.Secret) error {
+// ManageRenewal for StaticTokenAuth is a no-op
+func (*StaticTokenAuth) ManageRenewal(ctx context.Context, client *vault.Client, secret *vault.Secret) error {
 	return nil
 }
 
@@ -112,7 +112,7 @@ func (s *StaticTokenAuth) Login(ctx context.Context, _ *vault.Client) (*vault.Se
 }
 
 // NewRemoteTokenAuth is a constructor for RemoteTokenAuth
-func NewRemoteTokenAuth(authMethod vault.AuthMethod, t TokenRenewer, aws *v1.Settings_VaultAwsAuth, retryOptions ...retry.Option) ClientAuth {
+func NewRemoteTokenAuth(authMethod vault.AuthMethod, t TokenRenewer, retryOptions ...retry.Option) ClientAuth {
 
 	// Standard retry options, which can be overridden by the loginRetryOptions parameter
 	defaultRetryOptions := []retry.Option{
@@ -137,8 +137,8 @@ type RemoteTokenAuth struct {
 	loginRetryOptions []retry.Option
 }
 
-func (r *RemoteTokenAuth) StartRenewal(ctx context.Context, client *vault.Client, secret *vault.Secret) error {
-	return r.tokenRenewer.StartRenewal(ctx, client, r, secret)
+func (r *RemoteTokenAuth) ManageRenewal(ctx context.Context, client *vault.Client, secret *vault.Secret) error {
+	return r.tokenRenewer.ManageRenewal(ctx, client, r, secret)
 }
 
 // Login wraps the low-level login with retry logic
@@ -171,7 +171,7 @@ func (r *RemoteTokenAuth) Login(ctx context.Context, client *vault.Client) (*vau
 
 	// As noted above, we need to check the context here, because our retry function can not return errors
 	if ctx.Err() != nil {
-		return nil, errors.Wrap(ctx.Err(), "Login canceled")
+		return nil, errors.Wrap(ctx.Err(), "login canceled")
 	}
 
 	return loginResponse, loginErr

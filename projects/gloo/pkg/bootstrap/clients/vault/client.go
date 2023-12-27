@@ -21,7 +21,7 @@ func NewAuthenticatedClient(ctx context.Context, vaultSettings *v1.Settings_Vaul
 		return nil, err
 	}
 
-	err = clientAuth.StartRenewal(ctx, client, secret)
+	err = clientAuth.ManageRenewal(ctx, client, secret)
 	if err != nil {
 		return nil, err
 	}

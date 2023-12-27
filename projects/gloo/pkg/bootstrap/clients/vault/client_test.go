@@ -19,7 +19,7 @@ import (
 
 type NoOpRenewal struct{}
 
-func (*NoOpRenewal) StartRenewal(ctx context.Context, client *vaultapi.Client, clientAuth ClientAuth, secret *vaultapi.Secret) error {
+func (*NoOpRenewal) ManageRenewal(ctx context.Context, client *vaultapi.Client, clientAuth ClientAuth, secret *vaultapi.Secret) error {
 	return nil
 }
 
@@ -82,8 +82,8 @@ var _ = Describe("ClientAuth", func() {
 				assertions.ExpectStatSumMatches(MLoginFailures, Equal(1))
 			})
 
-			It("startRenewal should return nil", func() {
-				err := clientAuth.StartRenewal(ctx, client, nil)
+			It("ManageRenewal should return nil", func() {
+				err := clientAuth.ManageRenewal(ctx, client, nil)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -113,8 +113,8 @@ var _ = Describe("ClientAuth", func() {
 				assertions.ExpectStatSumMatches(MLoginSuccesses, Equal(1))
 			})
 
-			It("startRenewal should return nil", func() {
-				err := clientAuth.StartRenewal(ctx, client, nil)
+			It("ManageRenewal should return nil", func() {
+				err := clientAuth.ManageRenewal(ctx, client, nil)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -132,7 +132,7 @@ var _ = Describe("ClientAuth", func() {
 				internalAuthMethod := mocks.NewMockAuthMethod(ctrl)
 				internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).Return(nil, eris.New("mocked error message")).AnyTimes()
 
-				clientAuth = NewRemoteTokenAuth(internalAuthMethod, &NoOpRenewal{}, &v1.Settings_VaultAwsAuth{}, retry.Attempts(3))
+				clientAuth = NewRemoteTokenAuth(internalAuthMethod, &NoOpRenewal{}, retry.Attempts(3))
 			})
 
 			It("should return the error", func() {
@@ -169,7 +169,7 @@ var _ = Describe("ClientAuth", func() {
 				internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).Return(nil, eris.New("error")).Times(1)
 				internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).Return(secret, nil).Times(1)
 
-				clientAuth = NewRemoteTokenAuth(internalAuthMethod, &NoOpRenewal{}, &v1.Settings_VaultAwsAuth{}, retry.Attempts(5))
+				clientAuth = NewRemoteTokenAuth(internalAuthMethod, &NoOpRenewal{}, retry.Attempts(5))
 			})
 
 			It("should return a client", func() {
@@ -195,7 +195,7 @@ var _ = Describe("ClientAuth", func() {
 			// The auth method will return an error twice, and then a success
 			// but we plan on cancelling the context before the success
 			internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).Return(nil, eris.New("error")).AnyTimes()
-			clientAuth = NewRemoteTokenAuth(internalAuthMethod, &NoOpRenewal{}, &v1.Settings_VaultAwsAuth{}, retry.Attempts(retryAttempts))
+			clientAuth = NewRemoteTokenAuth(internalAuthMethod, &NoOpRenewal{}, retry.Attempts(retryAttempts))
 		})
 
 		It("should return a context error", func() {
@@ -205,7 +205,7 @@ var _ = Describe("ClientAuth", func() {
 			}()
 
 			client, err := NewAuthenticatedClient(ctx, nil, clientAuth)
-			Expect(err).To(MatchError("unable to log in to auth method: Login canceled: context canceled"))
+			Expect(err).To(MatchError("unable to log in to auth method: login canceled: context canceled"))
 			Expect(client).To(BeNil())
 
 			assertions.ExpectStatLastValueMatches(MLastLoginFailure, Not(BeZero()))

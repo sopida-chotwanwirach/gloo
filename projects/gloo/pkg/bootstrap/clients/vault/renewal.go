@@ -16,7 +16,7 @@ type TokenWatcher interface {
 }
 
 type TokenRenewer interface {
-	StartRenewal(ctx context.Context, client *vault.Client, clientAuth ClientAuth, secret *vault.Secret) error
+	ManageRenewal(ctx context.Context, client *vault.Client, clientAuth ClientAuth, secret *vault.Secret) error
 }
 
 var _ TokenRenewer = &VaultTokenRenewer{}
@@ -59,15 +59,16 @@ func NewVaultTokenRenewer(params *NewVaultTokenRenewerParams) *VaultTokenRenewer
 	}
 }
 
-// StartRenewal wraps the renewal process in a go routine
-func (t *VaultTokenRenewer) StartRenewal(ctx context.Context, client *vault.Client, clientAuth ClientAuth, secret *vault.Secret) error {
+// ManageRenewal wraps the renewal process in a go routine
+func (t *VaultTokenRenewer) ManageRenewal(ctx context.Context, client *vault.Client, clientAuth ClientAuth, secret *vault.Secret) error {
 	go t.RenewToken(ctx, client, clientAuth, secret)
 	return nil
 }
 
 // Once you've set the token for your Vault client, you will need to periodically renew its lease.
 // taken from https://github.com/hashicorp/vault-examples/blob/main/examples/token-renewal/go/example.go
-func (r *VaultTokenRenewer) RenewToken(ctx context.Context, client *vault.Client, clientAuth ClientAuth, secret *vault.Secret) {
+// the error that gets returned is dropped by the goroutine that calls this function, but is useful for testing
+func (r *VaultTokenRenewer) RenewToken(ctx context.Context, client *vault.Client, clientAuth ClientAuth, secret *vault.Secret) error {
 	contextutils.LoggerFrom(ctx).Debugf("Starting renewToken goroutine")
 
 	// On the first time through we have just logged in, so we don't need to do it again. Every other time we need to log in again.
@@ -86,18 +87,18 @@ func (r *VaultTokenRenewer) RenewToken(ctx context.Context, client *vault.Client
 			} else {
 				contextutils.LoggerFrom(ctx).Errorf("unable to authenticate to Vault: %v.", err)
 			}
-			return // we are now no longer renewing the token
+			return err // we are now no longer renewing the token
 		}
 
 		retry, tokenErr := r.manageTokenLifecycle(ctx, client, secret, r.leaseIncrement)
-		// The only error this function can return is if the vaultLoginResp is nil, and we have checked against that in loginWithRetry, which
+		// The only error this function can return is if the secret is nil, and we have checked against that in loginWithRetry, which
 		// is currently the only called.
 		if tokenErr != nil {
 			contextutils.LoggerFrom(ctx).Errorf("unable to start managing token lifecycle: %v. This error is expected to be unreachable.", tokenErr)
 		}
 
 		if !retry {
-			return
+			return tokenErr
 		}
 
 	}
@@ -115,7 +116,7 @@ var vaultGetWatcher = func(client *vault.Client, secret *vault.Secret, watcherIn
 	})
 
 	if err != nil {
-		return nil, nil, ErrInitializeWatcher(err)
+		return nil, nil, err
 	}
 
 	go watcher.Start()
