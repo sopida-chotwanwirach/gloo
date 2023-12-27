@@ -208,20 +208,18 @@ Note that you must adjust the `pathPrefix` options when you use a custom `kv` se
 export VAULT_ADDRESS=http://vault-internal.vault:8200
 cat <<EOF > helm-overrides.yaml
 settings:
-  kubeResourceOverride:
-    spec:
-      secretOptions:
-        sources:
-          - vault:
-              # set to address for the Vault instance
-              address: ${VAULT_ADDRESS}
-              aws:
-                iamServerIdHeader: ${IAM_SERVER_ID_HEADER_VALUE}
-                mountPath: aws
-                region:  ${AWS_REGION}
-              # assumes kv store is mounted on 'dev'
-              pathPrefix: dev
-          - kubernetes: {}
+  secretOptions:
+    sources:
+      - vault:
+          # set to address for the Vault instance
+          address: ${VAULT_ADDRESS}
+          aws:
+            iamServerIdHeader: ${IAM_SERVER_ID_HEADER_VALUE}
+            mountPath: aws
+            region:  ${AWS_REGION}
+          # assumes kv store is mounted on 'dev'
+          pathPrefix: dev
+      - kubernetes: {}
 gloo:
   serviceAccount:
     extraAnnotations: 

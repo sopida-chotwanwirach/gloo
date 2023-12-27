@@ -17,9 +17,18 @@ import (
 	"github.com/solo-io/gloo/test/gomega/assertions"
 )
 
-type NoOpRenewal struct{}
+// testRenewal is a mock implementation of the Renewer interface.
+// It has the 'calledTimes' field to track whether or not it has been called
+type testRenewal struct {
+	calledTimes int
+}
 
-func (*NoOpRenewal) ManageTokenRenewal(ctx context.Context, client *vaultapi.Client, clientAuth ClientAuth, secret *vaultapi.Secret) {
+func (t *testRenewal) ManageTokenRenewal(ctx context.Context, client *vaultapi.Client, clientAuth ClientAuth, secret *vaultapi.Secret) {
+	t.calledTimes += 1
+}
+
+func (t *testRenewal) TimesCalled() int {
+	return t.calledTimes
 }
 
 var _ = Describe("ClientAuth", func() {
@@ -27,10 +36,10 @@ var _ = Describe("ClientAuth", func() {
 	var (
 		ctx    context.Context
 		cancel context.CancelFunc
-		client *vaultapi.Client
 
-		clientAuth ClientAuth
-		ctrl       *gomock.Controller
+		clientAuth   ClientAuth
+		ctrl         *gomock.Controller
+		tokenRenewer *testRenewal
 	)
 
 	BeforeEach(func() {
@@ -55,7 +64,6 @@ var _ = Describe("ClientAuth", func() {
 
 	Context("Access Token Auth", func() {
 		// These tests validate the behavior of the StaticTokenAuth implementation of the ClientAuth interface
-
 		When("token is empty", func() {
 
 			BeforeEach(func() {
@@ -76,11 +84,6 @@ var _ = Describe("ClientAuth", func() {
 
 				assertions.ExpectStatLastValueMatches(MLastLoginFailure, Not(BeZero()))
 				assertions.ExpectStatSumMatches(MLoginFailures, Equal(1))
-			})
-
-			It("ManageTokenRenewal should return nil", func() {
-				err := clientAuth.ManageTokenRenewal(ctx, client, nil)
-				Expect(err).NotTo(HaveOccurred())
 			})
 
 		})
@@ -109,11 +112,6 @@ var _ = Describe("ClientAuth", func() {
 				assertions.ExpectStatSumMatches(MLoginSuccesses, Equal(1))
 			})
 
-			It("ManageTokenRenewal should return nil", func() {
-				err := clientAuth.ManageTokenRenewal(ctx, client, nil)
-				Expect(err).NotTo(HaveOccurred())
-			})
-
 		})
 
 	})
@@ -128,13 +126,17 @@ var _ = Describe("ClientAuth", func() {
 				internalAuthMethod := mocks.NewMockAuthMethod(ctrl)
 				internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).Return(nil, eris.New("mocked error message")).AnyTimes()
 
-				clientAuth = NewRemoteTokenAuth(internalAuthMethod, &NoOpRenewal{}, retry.Attempts(3))
+				tokenRenewer = &testRenewal{}
+				clientAuth = NewRemoteTokenAuth(internalAuthMethod, &testRenewal{}, retry.Attempts(3))
 			})
 
 			It("should return the error", func() {
 				secret, err := NewAuthenticatedClient(ctx, nil, clientAuth)
 				Expect(err).To(MatchError("unable to log in to auth method: unable to authenticate to vault: mocked error message"))
 				Expect(secret).To(BeNil())
+
+				// We had an error, so don't expect renewal to be started
+				Expect(tokenRenewer.TimesCalled()).To(Equal(0))
 
 				assertions.ExpectStatLastValueMatches(MLastLoginFailure, Not(BeZero()))
 				assertions.ExpectStatLastValueMatches(MLastLoginSuccess, BeZero())
@@ -162,13 +164,15 @@ var _ = Describe("ClientAuth", func() {
 				internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).Return(nil, eris.New("error")).Times(1)
 				internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).Return(secret, nil).Times(1)
 
-				clientAuth = NewRemoteTokenAuth(internalAuthMethod, &NoOpRenewal{}, retry.Attempts(5))
+				tokenRenewer = &testRenewal{}
+				clientAuth = NewRemoteTokenAuth(internalAuthMethod, tokenRenewer, retry.Attempts(5))
 			})
 
 			It("should return a client", func() {
 				client, err = NewAuthenticatedClient(ctx, nil, clientAuth)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(client).ToNot((BeNil()))
+				Expect(tokenRenewer.TimesCalled()).To(Equal(1))
 
 				assertions.ExpectStatLastValueMatches(MLastLoginFailure, Not(BeZero()))
 				assertions.ExpectStatLastValueMatches(MLastLoginSuccess, Not(BeZero()))
@@ -188,7 +192,8 @@ var _ = Describe("ClientAuth", func() {
 			// The auth method will return an error twice, and then a success
 			// but we plan on cancelling the context before the success
 			internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).Return(nil, eris.New("error")).AnyTimes()
-			clientAuth = NewRemoteTokenAuth(internalAuthMethod, &NoOpRenewal{}, retry.Attempts(retryAttempts))
+			tokenRenewer = &testRenewal{}
+			clientAuth = NewRemoteTokenAuth(internalAuthMethod, tokenRenewer, retry.Attempts(retryAttempts))
 		})
 
 		It("should return a context error", func() {
@@ -200,6 +205,7 @@ var _ = Describe("ClientAuth", func() {
 			client, err := NewAuthenticatedClient(ctx, nil, clientAuth)
 			Expect(err).To(MatchError("unable to log in to auth method: login canceled: context canceled"))
 			Expect(client).To(BeNil())
+			Expect(tokenRenewer.TimesCalled()).To(Equal(0))
 
 			assertions.ExpectStatLastValueMatches(MLastLoginFailure, Not(BeZero()))
 			assertions.ExpectStatLastValueMatches(MLastLoginSuccess, BeZero())

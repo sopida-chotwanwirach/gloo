@@ -24,7 +24,7 @@ type ClientAuth interface {
 	vault.AuthMethod
 	// ManageTokenRenewal should be called after a successful login to start the renewal process
 	// This method may have many different types of implementation, from just a noop to spinning up a separate go routine
-	ManageTokenRenewal(ctx context.Context, client *vault.Client, secret *vault.Secret) error
+	ManageTokenRenewal(ctx context.Context, client *vault.Client, secret *vault.Secret)
 }
 
 var _ ClientAuth = &StaticTokenAuth{}
@@ -60,6 +60,7 @@ func ClientAuthFactory(vaultSettings *v1.Settings_VaultSecrets) (ClientAuth, err
 
 		tokenRenewer := NewVaultTokenRenewer(&NewVaultTokenRenewerParams{
 			LeaseIncrement: int(authMethod.Aws.GetLeaseIncrement()),
+			GetWatcher:     vaultGetWatcher,
 		})
 
 		return NewRemoteTokenAuth(awsAuth, tokenRenewer), nil
@@ -88,8 +89,7 @@ func (s *StaticTokenAuth) GetToken() string {
 }
 
 // ManageTokenRenewal for StaticTokenAuth is a no-op
-func (*StaticTokenAuth) ManageTokenRenewal(ctx context.Context, client *vault.Client, secret *vault.Secret) error {
-	return nil
+func (*StaticTokenAuth) ManageTokenRenewal(ctx context.Context, client *vault.Client, secret *vault.Secret) {
 }
 
 // Login logs in to vault using a static token
@@ -117,7 +117,7 @@ func NewRemoteTokenAuth(authMethod vault.AuthMethod, t TokenRenewer, retryOption
 	defaultRetryOptions := []retry.Option{
 		retry.Delay(1 * time.Second),
 		retry.DelayType(retry.BackOffDelay),
-		retry.Attempts(1),
+		retry.Attempts(3),
 		retry.LastErrorOnly(true),
 	}
 
@@ -136,9 +136,8 @@ type RemoteTokenAuth struct {
 	loginRetryOptions []retry.Option
 }
 
-func (r *RemoteTokenAuth) ManageTokenRenewal(ctx context.Context, client *vault.Client, secret *vault.Secret) error {
+func (r *RemoteTokenAuth) ManageTokenRenewal(ctx context.Context, client *vault.Client, secret *vault.Secret) {
 	r.tokenRenewer.ManageTokenRenewal(ctx, client, r, secret)
-	return nil
 }
 
 // Login wraps the low-level login with retry logic
@@ -174,13 +173,18 @@ func (r *RemoteTokenAuth) Login(ctx context.Context, client *vault.Client) (*vau
 		return nil, errors.Wrap(ctx.Err(), "login canceled")
 	}
 
-	return loginResponse, loginErr
+	if loginErr != nil {
+		return nil, loginErr
+	}
+
+	return loginResponse, nil
 }
 
 func (r *RemoteTokenAuth) loginOnce(ctx context.Context, client *vault.Client) (*vault.Secret, error) {
 	loginResponse, loginErr := r.authMethod.Login(ctx, client)
 	if loginErr != nil {
 		contextutils.LoggerFrom(ctx).Errorf("unable to authenticate to vault: %v", loginErr)
+		fmt.Println("AWSTEST Login Failure!", time.Now().Unix())
 		utils.Measure(ctx, MLastLoginFailure, time.Now().Unix())
 		utils.MeasureOne(ctx, MLoginFailures)
 		return nil, ErrVaultAuthentication(loginErr)
@@ -188,6 +192,7 @@ func (r *RemoteTokenAuth) loginOnce(ctx context.Context, client *vault.Client) (
 
 	if loginResponse == nil {
 		contextutils.LoggerFrom(ctx).Error(ErrNoAuthInfo)
+		fmt.Println("AWSTEST Login Failure (nil)!", time.Now().Unix())
 		utils.Measure(ctx, MLastLoginFailure, time.Now().Unix())
 		utils.MeasureOne(ctx, MLoginFailures)
 		return nil, ErrNoAuthInfo

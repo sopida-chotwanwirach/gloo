@@ -99,7 +99,7 @@ var _ = Describe("Vault Token Renewal", func() {
 			internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).Return(secret, nil).AnyTimes()
 			client = &vault.Client{}
 
-			clientAuth = NewRemoteTokenAuth(internalAuthMethod, &NoOpRenewal{}, retry.Attempts(3))
+			clientAuth = NewRemoteTokenAuth(internalAuthMethod, nil, retry.Attempts(3))
 
 			renewer = NewVaultTokenRenewer(&NewVaultTokenRenewerParams{
 				LeaseIncrement: 1,
@@ -152,7 +152,7 @@ var _ = Describe("Vault Token Renewal", func() {
 
 			})
 
-			clientAuth = NewRemoteTokenAuth(internalAuthMethod, &NoOpRenewal{}, retry.Attempts(3))
+			clientAuth = NewRemoteTokenAuth(internalAuthMethod, nil, retry.Attempts(3))
 
 			renewer = NewVaultTokenRenewer(&NewVaultTokenRenewerParams{
 				LeaseIncrement: 1,
@@ -196,7 +196,7 @@ var _ = Describe("Vault Token Renewal", func() {
 
 			internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).Return(nil, errMock).AnyTimes()
 
-			clientAuth = NewRemoteTokenAuth(internalAuthMethod, &NoOpRenewal{}, retry.Attempts(3))
+			clientAuth = NewRemoteTokenAuth(internalAuthMethod, nil, retry.Attempts(3))
 
 			renewer = NewVaultTokenRenewer(&NewVaultTokenRenewerParams{
 				LeaseIncrement: 1,
@@ -235,51 +235,111 @@ var _ = Describe("Vault Token Renewal", func() {
 	})
 
 	When("There is a non-renewable token then the token is updated", func() {
+		var internalAuthMethod *mocks.MockAuthMethod
 
 		BeforeEach(func() {
 			ctrl = gomock.NewController(GinkgoT())
-			internalAuthMethod := mocks.NewMockAuthMethod(ctrl)
+			internalAuthMethod = mocks.NewMockAuthMethod(ctrl)
 			client = &vault.Client{}
 
-			gomock.InOrder(
-				internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).Times(1).Return(nonRenewableSecret(), nil),
-				internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).AnyTimes().Return(renewableSecret(), nil),
-			)
-
-			clientAuth = NewRemoteTokenAuth(internalAuthMethod, &NoOpRenewal{}, retry.Attempts(3))
-
-			renewer = NewVaultTokenRenewer(&NewVaultTokenRenewerParams{
-				LeaseIncrement:           1,
-				GetWatcher:               getTestWatcher,
-				RetryOnNonRenewableSleep: 1, // Pass this in so we don't have to wait for the default
-			})
 		})
 
-		It("should work when the secret is updated to be renewable", func() {
-			// Run through the basic channel output and look at the metrics
-			go func() {
-				time.Sleep(sleepTime)
-				doneCh <- errors.Errorf("Renewal error") // Force renewal
-				time.Sleep(2 * time.Second)              // Give it time to retry the login
-				renewCh <- &vault.RenewOutput{}
-				time.Sleep(sleepTime)
-				cancel()
-			}()
+		When("We leave time for the sleep loop to execute", func() {
 
-			err := renewer.RenewToken(ctx, client, clientAuth, nonRenewableSecret())
-			Expect(err).NotTo(HaveOccurred())
+			BeforeEach(func() {
 
-			// The login never fails, it just returns an non-renewable secret
-			assertions.ExpectStatLastValueMatches(MLastLoginFailure, BeZero())
-			assertions.ExpectStatLastValueMatches(MLastLoginSuccess, Not(BeZero()))
-			assertions.ExpectStatSumMatches(MLoginFailures, BeZero())
-			// Log in once for the first, passed in unrenewable secret,
-			// then again for the unrenewable from the mocked response and then again for the success
-			assertions.ExpectStatSumMatches(MLoginSuccesses, Equal(3))
-			assertions.ExpectStatLastValueMatches(MLastRenewFailure, Not(BeZero()))
-			assertions.ExpectStatLastValueMatches(MLastRenewSuccess, Not(BeZero()))
-			assertions.ExpectStatSumMatches(MRenewFailures, Equal(1))
-			assertions.ExpectStatSumMatches(MRenewSuccesses, Equal(1))
+				gomock.InOrder(
+					internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).Times(1).Return(nonRenewableSecret(), nil),
+					internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).AnyTimes().Return(renewableSecret(), nil),
+				)
+				renewer = NewVaultTokenRenewer(&NewVaultTokenRenewerParams{
+					LeaseIncrement:           1,
+					GetWatcher:               getTestWatcher,
+					RetryOnNonRenewableSleep: 1, // Pass this in so we don't have to wait for the default
+				})
+
+				clientAuth = NewRemoteTokenAuth(internalAuthMethod, nil, retry.Attempts(3))
+			})
+
+			It("should work when the secret is updated to be renewable", func() {
+
+				// Run through the basic channel output and look at the metrics
+				go func() {
+					time.Sleep(sleepTime)
+					doneCh <- errors.Errorf("Renewal error") // Force renewal
+					time.Sleep(2 * time.Second)              // Give it time to retry the login
+					renewCh <- &vault.RenewOutput{}
+					time.Sleep(sleepTime)
+					cancel()
+				}()
+
+				err := renewer.RenewToken(ctx, client, clientAuth, nonRenewableSecret())
+				Expect(err).NotTo(HaveOccurred())
+
+				// The login never fails, it just returns an non-renewable secret
+				assertions.ExpectStatLastValueMatches(MLastLoginFailure, BeZero())
+				assertions.ExpectStatLastValueMatches(MLastLoginSuccess, Not(BeZero()))
+				assertions.ExpectStatSumMatches(MLoginFailures, BeZero())
+				// Log in once for the first, passed in unrenewable secret,
+				// then again for the unrenewable from the mocked response and then again for the success
+				assertions.ExpectStatSumMatches(MLoginSuccesses, Equal(3))
+				assertions.ExpectStatLastValueMatches(MLastRenewFailure, Not(BeZero()))
+				assertions.ExpectStatLastValueMatches(MLastRenewSuccess, Not(BeZero()))
+				assertions.ExpectStatSumMatches(MRenewFailures, Equal(1))
+				assertions.ExpectStatSumMatches(MRenewSuccesses, Equal(1))
+			})
+
+		})
+
+		// This is the same as the above test, but we set RetryOnNonRenewableSleep to a higher value
+		// to validate that it is applied effectively. In this case we should sleep for 5 seconds,
+		// which means that we will not have time to retry the login before the context is cancelled
+		When("We don't leave time for the sleep loop to finish", func() {
+			BeforeEach(func() {
+				ctrl = gomock.NewController(GinkgoT())
+				internalAuthMethod := mocks.NewMockAuthMethod(ctrl)
+				client = &vault.Client{}
+
+				gomock.InOrder(
+					internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).Times(0).Return(nonRenewableSecret(), nil),
+					internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).AnyTimes().Return(renewableSecret(), nil),
+				)
+				renewer = NewVaultTokenRenewer(&NewVaultTokenRenewerParams{
+					LeaseIncrement:           1,
+					GetWatcher:               getTestWatcher,
+					RetryOnNonRenewableSleep: 5, // Pass this in so we don't have to wait for the default
+				})
+
+				clientAuth = NewRemoteTokenAuth(internalAuthMethod, nil, retry.Attempts(3))
+			})
+
+			It("should fail when RetryOnNonRenewableSleep is less than our sleep time ", func() {
+
+				// Run through the basic channel output and look at the metrics
+				go func() {
+					time.Sleep(sleepTime)
+					doneCh <- errors.Errorf("Renewal error") // Force renewal
+					time.Sleep(2 * time.Second)              // Not enough time to re-check the token
+					renewCh <- &vault.RenewOutput{}
+					time.Sleep(sleepTime)
+					cancel()
+				}()
+
+				err := renewer.RenewToken(ctx, client, clientAuth, nonRenewableSecret())
+				Expect(err).NotTo(HaveOccurred())
+
+				// The login never fails, it just returns an non-renewable secret
+				assertions.ExpectStatLastValueMatches(MLastLoginFailure, BeZero())
+				assertions.ExpectStatLastValueMatches(MLastLoginSuccess, BeZero())
+				assertions.ExpectStatSumMatches(MLoginFailures, BeZero())
+				// We never get past the 'sleep' in the check for renewability so don't trigger any metrics
+				assertions.ExpectStatSumMatches(MLoginSuccesses, BeZero())
+				assertions.ExpectStatLastValueMatches(MLastRenewFailure, BeZero())
+				assertions.ExpectStatLastValueMatches(MLastRenewSuccess, BeZero())
+				assertions.ExpectStatSumMatches(MRenewFailures, BeZero())
+				assertions.ExpectStatSumMatches(MRenewSuccesses, BeZero())
+			})
+
 		})
 	})
 
@@ -290,7 +350,7 @@ var _ = Describe("Vault Token Renewal", func() {
 			internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).Return(secret, nil).AnyTimes()
 			client = &vault.Client{}
 
-			clientAuth = NewRemoteTokenAuth(internalAuthMethod, &NoOpRenewal{}, retry.Attempts(3))
+			clientAuth = NewRemoteTokenAuth(internalAuthMethod, nil, retry.Attempts(3))
 
 			renewer = NewVaultTokenRenewer(&NewVaultTokenRenewerParams{
 				LeaseIncrement: 1,
@@ -314,4 +374,6 @@ var _ = Describe("Vault Token Renewal", func() {
 			assertions.ExpectStatSumMatches(MRenewSuccesses, BeZero())
 		})
 	})
+
+	When("The context is updated")
 })
