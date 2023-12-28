@@ -76,7 +76,7 @@ var _ = Describe("Vault Secret Store (AWS Auth)", decorators.Vault, func() {
 		testContext.RunVault()
 
 		// We need to turn on Vault AWS Auth after it has started running
-		err := testContext.VaultInstance().EnableAWSCredentialsAuthMethod(vaultSecretSettings, vaultAwsRole, []string{"default_ttl=8s", "max_ttl=8s"})
+		err := testContext.VaultInstance().EnableAWSCredentialsAuthMethod(vaultSecretSettings, vaultAwsRole, []string{"default_ttl=10s", "max_ttl=10s"})
 		Expect(err).NotTo(HaveOccurred())
 
 		testContext.JustBeforeEach()
@@ -100,7 +100,7 @@ var _ = Describe("Vault Secret Store (AWS Auth)", decorators.Vault, func() {
 						Region:          vaultAwsRegion,
 						AccessKeyId:     v.AccessKeyID,
 						SecretAccessKey: v.SecretAccessKey,
-						LeaseIncrement:  4,
+						LeaseIncrement:  5,
 					},
 				},
 				PathPrefix: bootstrap.DefaultPathPrefix,
@@ -128,7 +128,7 @@ var _ = Describe("Vault Secret Store (AWS Auth)", decorators.Vault, func() {
 
 			fmt.Println("AWSTEST Starting Eventually", time.Now().Unix())
 			// TEST CASE: We can read with a token
-			Eventually(getSecret, "4s", ".5s").Should(Succeed())
+			Eventually(getSecret, "5s", ".5s").Should(Succeed())
 			fmt.Println("AWSTEST Ending Eventually", time.Now().Unix())
 
 			// Check the metrics - we should have one login success and one renewal beacuse the LifetimeWatcher renews as soon as it is started
@@ -142,12 +142,9 @@ var _ = Describe("Vault Secret Store (AWS Auth)", decorators.Vault, func() {
 			assertions.ExpectStatSumMatches(vault.MRenewSuccesses, Equal(1))
 
 			// TEST CASE: We can read the secret with a renewed token
-			// We have used up (0-4] seconds of the 8 second lease, if we sleep for 4 seconds, we should
-			// have to renew the lease
-			time.Sleep(4 * time.Second)
-
-			// We are setting the ttl of the secret lease to 8 seconds, so this would fail without the goroutine which renews the lease.
-			// To see this fail, comment out the call to the 'renewToken' goroutine in pkg/bootstrap/clients/vault.go
+			// We have used up (0-5] seconds of the 10 second lease, if we sleep for 5 more seconds, we should
+			// have to renew the lease again without needed to re-login
+			time.Sleep(5 * time.Second)
 
 			// Check the metrics - we should have an additional renewal
 			assertions.ExpectStatLastValueMatches(vault.MLastLoginFailure, BeZero())
@@ -162,8 +159,9 @@ var _ = Describe("Vault Secret Store (AWS Auth)", decorators.Vault, func() {
 			getSecret(Default)
 
 			// TEST CASE: we can read the secret after the token expires and login is re-run
-			// We have used up (4-8] seconds of the 10 second lease, if we sleep for 4 seconds, we should see a re-login
-			time.Sleep(4 * time.Second)
+			// We have used up (5-10] seconds of the 10 second lease, if we sleep for 6 seconds, we should see a re-login
+			// Sleep a little extra to give login time to complete
+			time.Sleep(7 * time.Second)
 
 			// Check the metrics - we should have an additional renewal failure, and an additional login success
 			// plus 2-3 more renewal successes. The uncertainty is due jitter used caculate the time to renew:
@@ -173,10 +171,11 @@ var _ = Describe("Vault Secret Store (AWS Auth)", decorators.Vault, func() {
 			assertions.ExpectStatLastValueMatches(vault.MLastLoginFailure, BeZero())
 			assertions.ExpectStatLastValueMatches(vault.MLastLoginSuccess, Not(BeZero()))
 			assertions.ExpectStatSumMatches(vault.MLoginFailures, BeZero())
-			assertions.ExpectStatSumMatches(vault.MLoginSuccesses, Equal(2))
+
 			assertions.ExpectStatLastValueMatches(vault.MLastRenewSuccess, Not(BeZero()))
 			assertions.ExpectStatSumMatches(vault.MRenewFailures, Equal(1))
 			assertions.ExpectStatSumMatches(vault.MRenewSuccesses, BeNumerically("~", 4, 5))
+			assertions.ExpectStatSumMatches(vault.MLoginSuccesses, Equal(2))
 
 			getSecret(Default)
 		})
