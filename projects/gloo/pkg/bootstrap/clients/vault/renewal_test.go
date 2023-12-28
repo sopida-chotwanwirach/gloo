@@ -16,11 +16,6 @@ import (
 	"github.com/solo-io/gloo/test/gomega/assertions"
 )
 
-var (
-	ctx    context.Context
-	cancel context.CancelFunc
-)
-
 type testWatcher struct {
 	DoneChannel  chan error
 	RenewChannel chan *vault.RenewOutput
@@ -80,7 +75,6 @@ var _ = Describe("Vault Token Renewal Logic", func() {
 	}
 
 	BeforeEach(func() {
-		ctx, cancel = context.WithCancel(context.Background())
 		secret = renewableSecret()
 		resetViews()
 
@@ -95,7 +89,13 @@ var _ = Describe("Vault Token Renewal Logic", func() {
 	})
 
 	When("Login always succeeds", func() {
+		var (
+			ctx    context.Context
+			cancel context.CancelFunc
+		)
+
 		BeforeEach(func() {
+			ctx, cancel = context.WithCancel(context.Background())
 			ctrl = gomock.NewController(GinkgoT())
 			internalAuthMethod := mocks.NewMockAuthMethod(ctrl)
 			internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).Return(secret, nil).AnyTimes()
@@ -134,14 +134,17 @@ var _ = Describe("Vault Token Renewal Logic", func() {
 			assertions.ExpectStatLastValueMatches(MLastRenewSuccess, Not(BeZero()))
 			assertions.ExpectStatSumMatches(MRenewFailures, Equal(1))
 			assertions.ExpectStatSumMatches(MRenewSuccesses, Equal(2))
-
-			//It("")
 		})
 	})
 
 	When("Login fails sometimes", func() {
+		var (
+			ctx    context.Context
+			cancel context.CancelFunc
+		)
 
 		BeforeEach(func() {
+			ctx, cancel = context.WithCancel(context.Background())
 			ctrl = gomock.NewController(GinkgoT())
 			internalAuthMethod := mocks.NewMockAuthMethod(ctrl)
 			client = &vault.Client{}
@@ -196,7 +199,13 @@ var _ = Describe("Vault Token Renewal Logic", func() {
 	})
 
 	When("Login always fails", func() {
+		var (
+			ctx    context.Context
+			cancel context.CancelFunc
+		)
+
 		BeforeEach(func() {
+			ctx, cancel = context.WithCancel(context.Background())
 			ctrl = gomock.NewController(GinkgoT())
 			internalAuthMethod := mocks.NewMockAuthMethod(ctrl)
 			client = &vault.Client{}
@@ -244,9 +253,12 @@ var _ = Describe("Vault Token Renewal Logic", func() {
 	When("There is a non-renewable token then the token is updated", func() {
 		var (
 			internalAuthMethod *mocks.MockAuthMethod
+			ctx                context.Context
+			cancel             context.CancelFunc
 		)
 
 		BeforeEach(func() {
+			ctx, cancel = context.WithCancel(context.Background())
 			ctrl = gomock.NewController(GinkgoT())
 			internalAuthMethod = mocks.NewMockAuthMethod(ctrl)
 			client = &vault.Client{}
@@ -304,6 +316,7 @@ var _ = Describe("Vault Token Renewal Logic", func() {
 		// which means that we will not have time to retry the login before the context is cancelled
 		When("We don't leave time for the sleep loop to finish", func() {
 			BeforeEach(func() {
+				ctx, cancel = context.WithCancel(context.Background())
 				ctrl = gomock.NewController(GinkgoT())
 				internalAuthMethod := mocks.NewMockAuthMethod(ctrl)
 				client = &vault.Client{}
@@ -353,8 +366,11 @@ var _ = Describe("Vault Token Renewal Logic", func() {
 	})
 
 	When("Initializing the watcher returns an error", func() {
-
+		var (
+			ctx context.Context
+		)
 		BeforeEach(func() {
+			ctx, _ = context.WithCancel(context.Background())
 			ctrl = gomock.NewController(GinkgoT())
 			internalAuthMethod := mocks.NewMockAuthMethod(ctrl)
 			internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).Return(secret, nil).AnyTimes()
