@@ -108,7 +108,7 @@ var _ = Describe("Vault Secret Store (AWS Auth)", decorators.Vault, func() {
 			}
 		})
 
-		It("can read secret using resource client after first login, after renewal, and after expiration and re-login", func() {
+		It("can read secret using resource client throughout the token lifecycle", func() {
 
 			var (
 				secret *gloov1.Secret
