@@ -1,7 +1,6 @@
 package e2e_test
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -126,10 +125,8 @@ var _ = Describe("Vault Secret Store (AWS Auth)", decorators.Vault, func() {
 				g.ExpectWithOffset(1, secret.GetOauth().GetClientSecret()).To(Equal("test"))
 			}
 
-			fmt.Println("AWSTEST Starting Eventually", time.Now().Unix())
 			// TEST CASE: We can read with a token
 			Eventually(getSecret, "5s", ".5s").Should(Succeed())
-			fmt.Println("AWSTEST Ending Eventually", time.Now().Unix())
 
 			// Check the metrics - we should have one login success and one renewal beacuse the LifetimeWatcher renews as soon as it is started
 			assertions.ExpectStatLastValueMatches(vault.MLastLoginFailure, BeZero())
@@ -159,7 +156,7 @@ var _ = Describe("Vault Secret Store (AWS Auth)", decorators.Vault, func() {
 			getSecret(Default)
 
 			// TEST CASE: we can read the secret after the token expires and login is re-run
-			// We have used up (5-10] seconds of the 10 second lease, if we sleep for 6 seconds, we should see a re-login
+			// We have used up (5-10] seconds of the 10 second lease, if we sleep for 7 seconds, we should see a re-login
 			// Sleep a little extra to give login time to complete
 			time.Sleep(7 * time.Second)
 
