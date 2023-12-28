@@ -29,6 +29,9 @@ func (t *testWatcher) RenewCh() <-chan *vault.RenewOutput {
 	return t.RenewChannel
 }
 
+func (*testWatcher) Start() {}
+func (*testWatcher) Stop()  {}
+
 var _ = Describe("Vault Token Renewal Logic", func() {
 	var (
 		client  *vault.Client
@@ -66,12 +69,12 @@ var _ = Describe("Vault Token Renewal Logic", func() {
 		}
 	)
 
-	var getTestWatcher = func(_ *vault.Client, _ *vault.Secret, _ int) (TokenWatcher, func(), error) {
-		return tw, func() {}, nil
+	var getTestWatcher = func(_ *vault.Client, _ *vault.Secret, _ int) (TokenWatcher, error) {
+		return tw, nil
 	}
 
-	var getErrorWatcher = func(_ *vault.Client, _ *vault.Secret, _ int) (TokenWatcher, func(), error) {
-		return nil, nil, errMock
+	var getErrorWatcher = func(_ *vault.Client, _ *vault.Secret, _ int) (TokenWatcher, error) {
+		return nil, errMock
 	}
 
 	BeforeEach(func() {

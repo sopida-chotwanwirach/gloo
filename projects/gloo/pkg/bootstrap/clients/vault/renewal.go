@@ -15,13 +15,12 @@ var (
 	ErrAuthNotDefined = errors.New("auth method not defined")
 )
 
-// TokenWatcher is an interface that wraps the DoneCh and RenewCh methods of the vault LifetimeWatcher
-// This lets us simulate the LifetimeWatcher in tests. The LifetimeWatcher also has Start and Stop methods
-// but we don't need to include those because those are wrapped in the vaultGetWatcher fucntion, which is
-// what is replaced in tests
+// TokenWatcher is an interface that wraps the DoneCh, RenewCh, Start, and Stop functions of the vault LifetimeWatcher
 type TokenWatcher interface {
 	DoneCh() <-chan error
 	RenewCh() <-chan *vault.RenewOutput
+	Stop()
+	Start()
 }
 
 // TokenRenewer is an interface that wraps the ManageTokenRenewal method. This lets us inject a noop function when we want
@@ -34,7 +33,7 @@ var _ TokenRenewer = &VaultTokenRenewer{}
 
 // getWatcherFunc is a function that returns a TokenWatcher and a function to stop the watcher
 // this lets us hide away some go routines while testing
-type getWatcherFunc func(client *vault.Client, secret *vault.Secret, watcherIncrement int) (TokenWatcher, func(), error)
+type getWatcherFunc func(client *vault.Client, secret *vault.Secret, watcherIncrement int) (TokenWatcher, error)
 
 // VaultTokenRewner is a struct that implements the TokenRenewer interface in a manner based on the vault examples
 // https://github.com/hashicorp/vault-examples/blob/main/examples/token-renewal/go/example.go
@@ -110,7 +109,7 @@ func (r *VaultTokenRenewer) RenewToken(ctx context.Context, client *vault.Client
 
 }
 
-var vaultGetWatcher = getWatcherFunc(func(client *vault.Client, secret *vault.Secret, watcherIncrement int) (TokenWatcher, func(), error) {
+var vaultGetWatcher = getWatcherFunc(func(client *vault.Client, secret *vault.Secret, watcherIncrement int) (TokenWatcher, error) {
 	watcher, err := client.NewLifetimeWatcher(&vault.LifetimeWatcherInput{
 		Secret:    secret,
 		Increment: watcherIncrement,
@@ -121,12 +120,10 @@ var vaultGetWatcher = getWatcherFunc(func(client *vault.Client, secret *vault.Se
 	})
 
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	go watcher.Start()
-
-	return watcher, watcher.Stop, nil
+	return watcher, nil
 })
 
 // Starts token lifecycle management
@@ -149,15 +146,15 @@ func (r *VaultTokenRenewer) manageTokenLifecycle(ctx context.Context, client *va
 		return retryLogin, nil
 	}
 
-	watcher, stop, err := r.getWatcher(client, secret, r.leaseIncrement)
-
+	watcher, err := r.getWatcher(client, secret, r.leaseIncrement)
 	// The only errors the constructor can return are if the input parameter is nil or if the secret is nil, and we
 	// are always passing input and have validated the secret is not nil in the calling
 	if err != nil {
 		return false, ErrInitializeWatcher(err)
 	}
 
-	defer stop()
+	go watcher.Start()
+	defer watcher.Stop()
 
 	for {
 		select {

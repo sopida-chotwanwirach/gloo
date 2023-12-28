@@ -29,8 +29,8 @@ var _ = Describe("Constructor tests", func() {
 	When("We call NewVaultTokenRenewer with passed parameters", func() {
 
 		It("Populates the passed values", func() {
-			testGetWatcher := getWatcherFunc(func(_ *vault.Client, _ *vault.Secret, _ int) (TokenWatcher, func(), error) {
-				return nil, nil, nil
+			testGetWatcher := getWatcherFunc(func(_ *vault.Client, _ *vault.Secret, _ int) (TokenWatcher, error) {
+				return nil, nil
 			})
 
 			renewer := NewVaultTokenRenewer(&NewVaultTokenRenewerParams{
