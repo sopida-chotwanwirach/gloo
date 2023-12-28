@@ -16,6 +16,11 @@ import (
 	"github.com/solo-io/gloo/test/gomega/assertions"
 )
 
+var (
+	ctx    context.Context
+	cancel context.CancelFunc
+)
+
 type testWatcher struct {
 	DoneChannel  chan error
 	RenewChannel chan *vault.RenewOutput
@@ -29,10 +34,8 @@ func (t *testWatcher) RenewCh() <-chan *vault.RenewOutput {
 	return t.RenewChannel
 }
 
-var _ = Describe("Vault Token Renewal", func() {
+var _ = Describe("Vault Token Renewal Logic", func() {
 	var (
-		ctx     context.Context
-		cancel  context.CancelFunc
 		client  *vault.Client
 		renewer *VaultTokenRenewer
 		secret  *vault.Secret
@@ -78,7 +81,6 @@ var _ = Describe("Vault Token Renewal", func() {
 
 	BeforeEach(func() {
 		ctx, cancel = context.WithCancel(context.Background())
-
 		secret = renewableSecret()
 		resetViews()
 
@@ -120,8 +122,9 @@ var _ = Describe("Vault Token Renewal", func() {
 				cancel()
 			}()
 
-			err := renewer.RenewToken(ctx, client, clientAuth, secret)
-			Expect(err).NotTo(HaveOccurred())
+			renewer.ManageTokenRenewal(ctx, client, clientAuth, secret)
+			// This kicks off the go rountine so we need to sleep to give it time to run
+			time.Sleep(5 * sleepTime)
 
 			assertions.ExpectStatLastValueMatches(MLastLoginFailure, BeZero())
 			assertions.ExpectStatLastValueMatches(MLastLoginSuccess, Not(BeZero()))
@@ -131,10 +134,13 @@ var _ = Describe("Vault Token Renewal", func() {
 			assertions.ExpectStatLastValueMatches(MLastRenewSuccess, Not(BeZero()))
 			assertions.ExpectStatSumMatches(MRenewFailures, Equal(1))
 			assertions.ExpectStatSumMatches(MRenewSuccesses, Equal(2))
+
+			//It("")
 		})
 	})
 
 	When("Login fails sometimes", func() {
+
 		BeforeEach(func() {
 			ctrl = gomock.NewController(GinkgoT())
 			internalAuthMethod := mocks.NewMockAuthMethod(ctrl)
@@ -174,8 +180,9 @@ var _ = Describe("Vault Token Renewal", func() {
 				cancel()
 			}()
 
-			err := renewer.RenewToken(ctx, client, clientAuth, secret)
-			Expect(err).NotTo(HaveOccurred())
+			renewer.ManageTokenRenewal(ctx, client, clientAuth, secret)
+			// This kicks off the go rountine so we need to sleep to give it time to run
+			time.Sleep(4*sleepTime + 1*time.Second)
 
 			assertions.ExpectStatLastValueMatches(MLastLoginFailure, Not(BeZero()))
 			assertions.ExpectStatLastValueMatches(MLastLoginSuccess, Not(BeZero()))
@@ -214,11 +221,11 @@ var _ = Describe("Vault Token Renewal", func() {
 				doneCh <- errors.Errorf("Renewal error")
 				time.Sleep(sleepTime)
 				renewCh <- &vault.RenewOutput{}
-				//time.Sleep(3 * time.Second) // A little extra sleep to let logins retry
 				time.Sleep(sleepTime)
 				cancel()
 			}()
 
+			// Use the blocking version here so we can check the error
 			err := renewer.RenewToken(ctx, client, clientAuth, secret)
 			Expect(err).To(MatchError("unable to log in to auth method: login canceled: context canceled"))
 
@@ -235,7 +242,9 @@ var _ = Describe("Vault Token Renewal", func() {
 	})
 
 	When("There is a non-renewable token then the token is updated", func() {
-		var internalAuthMethod *mocks.MockAuthMethod
+		var (
+			internalAuthMethod *mocks.MockAuthMethod
+		)
 
 		BeforeEach(func() {
 			ctrl = gomock.NewController(GinkgoT())
@@ -244,10 +253,8 @@ var _ = Describe("Vault Token Renewal", func() {
 
 		})
 
-		When("We leave time for the sleep loop to execute", func() {
-
+		When("We leave time to wait for the token to be updated", func() {
 			BeforeEach(func() {
-
 				gomock.InOrder(
 					internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).Times(1).Return(nonRenewableSecret(), nil),
 					internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).AnyTimes().Return(renewableSecret(), nil),
@@ -273,6 +280,7 @@ var _ = Describe("Vault Token Renewal", func() {
 					cancel()
 				}()
 
+				// Use the blocking version here so we can mirror the test below where an error does occur
 				err := renewer.RenewToken(ctx, client, clientAuth, nonRenewableSecret())
 				Expect(err).NotTo(HaveOccurred())
 
@@ -292,7 +300,7 @@ var _ = Describe("Vault Token Renewal", func() {
 		})
 
 		// This is the same as the above test, but we set RetryOnNonRenewableSleep to a higher value
-		// to validate that it is applied effectively. In this case we should sleep for 5 seconds,
+		// to validate that it is applied. In this case it should sleep for 5 seconds,
 		// which means that we will not have time to retry the login before the context is cancelled
 		When("We don't leave time for the sleep loop to finish", func() {
 			BeforeEach(func() {
@@ -325,6 +333,7 @@ var _ = Describe("Vault Token Renewal", func() {
 					cancel()
 				}()
 
+				// Use the blocking version here so we can capture the error
 				err := renewer.RenewToken(ctx, client, clientAuth, nonRenewableSecret())
 				Expect(err).NotTo(HaveOccurred())
 
@@ -344,6 +353,7 @@ var _ = Describe("Vault Token Renewal", func() {
 	})
 
 	When("Initializing the watcher returns an error", func() {
+
 		BeforeEach(func() {
 			ctrl = gomock.NewController(GinkgoT())
 			internalAuthMethod := mocks.NewMockAuthMethod(ctrl)
@@ -375,5 +385,4 @@ var _ = Describe("Vault Token Renewal", func() {
 		})
 	})
 
-	When("The context is updated")
 })

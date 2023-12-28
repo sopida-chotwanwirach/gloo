@@ -1,6 +1,7 @@
 package e2e_test
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -9,11 +10,14 @@ import (
 	gloov1 "github.com/solo-io/gloo/projects/gloo/pkg/api/v1"
 	v1 "github.com/solo-io/gloo/projects/gloo/pkg/api/v1/enterprise/options/extauth/v1"
 	bootstrap "github.com/solo-io/gloo/projects/gloo/pkg/bootstrap/clients"
+	"github.com/solo-io/gloo/projects/gloo/pkg/bootstrap/clients/vault"
 	"github.com/solo-io/gloo/test/e2e"
 	"github.com/solo-io/gloo/test/ginkgo/decorators"
+	"github.com/solo-io/gloo/test/gomega/assertions"
 	"github.com/solo-io/gloo/test/testutils"
 	"github.com/solo-io/solo-kit/pkg/api/v1/clients"
 	"github.com/solo-io/solo-kit/pkg/api/v1/resources/core"
+	"go.opencensus.io/stats/view"
 )
 
 const (
@@ -38,6 +42,7 @@ var _ = Describe("Vault Secret Store (AWS Auth)", decorators.Vault, func() {
 	)
 
 	BeforeEach(func() {
+		resetViews()
 		testContext = testContextFactory.NewTestContextWithVault(testutils.AwsCredentials())
 		testContext.BeforeEach()
 
@@ -71,7 +76,7 @@ var _ = Describe("Vault Secret Store (AWS Auth)", decorators.Vault, func() {
 		testContext.RunVault()
 
 		// We need to turn on Vault AWS Auth after it has started running
-		err := testContext.VaultInstance().EnableAWSCredentialsAuthMethod(vaultSecretSettings, vaultAwsRole, []string{"default_ttl=10s", "max_ttl=10s"})
+		err := testContext.VaultInstance().EnableAWSCredentialsAuthMethod(vaultSecretSettings, vaultAwsRole, []string{"default_ttl=8s", "max_ttl=8s"})
 		Expect(err).NotTo(HaveOccurred())
 
 		testContext.JustBeforeEach()
@@ -95,6 +100,7 @@ var _ = Describe("Vault Secret Store (AWS Auth)", decorators.Vault, func() {
 						Region:          vaultAwsRegion,
 						AccessKeyId:     v.AccessKeyID,
 						SecretAccessKey: v.SecretAccessKey,
+						LeaseIncrement:  4,
 					},
 				},
 				PathPrefix: bootstrap.DefaultPathPrefix,
@@ -102,7 +108,8 @@ var _ = Describe("Vault Secret Store (AWS Auth)", decorators.Vault, func() {
 			}
 		})
 
-		It("can read secret using resource client", func() {
+		FIt("can read secret using resource client after first login, after renewal, and after expiration and re-login", func() {
+
 			var (
 				secret *gloov1.Secret
 				err    error
@@ -119,12 +126,58 @@ var _ = Describe("Vault Secret Store (AWS Auth)", decorators.Vault, func() {
 				g.ExpectWithOffset(1, secret.GetOauth().GetClientSecret()).To(Equal("test"))
 			}
 
-			Eventually(getSecret, "5s", ".5s").Should(Succeed())
-			// Sleep and try again. There is a 10s ttl on the lease, so this should fail
-			time.Sleep(12 * time.Second)
-			// We are setting the ttl of the secret lease to 10 seconds, so this would fail without the goroutine which renews the lease.
+			fmt.Println("AWSTEST Starting Eventually", time.Now().Unix())
+			// TEST CASE: We can read with a token
+			Eventually(getSecret, "4s", ".5s").Should(Succeed())
+			fmt.Println("AWSTEST Ending Eventually", time.Now().Unix())
+
+			// Check the metrics - we should have one login success and one renewal beacuse the LifetimeWatcher renews as soon as it is started
+			assertions.ExpectStatLastValueMatches(vault.MLastLoginFailure, BeZero())
+			assertions.ExpectStatLastValueMatches(vault.MLastLoginSuccess, Not(BeZero()))
+			assertions.ExpectStatSumMatches(vault.MLoginFailures, BeZero())
+			assertions.ExpectStatSumMatches(vault.MLoginSuccesses, Equal(1))
+			assertions.ExpectStatLastValueMatches(vault.MLastRenewFailure, BeZero())
+			assertions.ExpectStatLastValueMatches(vault.MLastRenewSuccess, Not(BeZero()))
+			assertions.ExpectStatSumMatches(vault.MRenewFailures, BeZero())
+			assertions.ExpectStatSumMatches(vault.MRenewSuccesses, Equal(1))
+
+			// TEST CASE: We can read the secret with a renewed token
+			// We have used up (0-4] seconds of the 8 second lease, if we sleep for 4 seconds, we should
+			// have to renew the lease
+			time.Sleep(4 * time.Second)
+
+			// We are setting the ttl of the secret lease to 8 seconds, so this would fail without the goroutine which renews the lease.
 			// To see this fail, comment out the call to the 'renewToken' goroutine in pkg/bootstrap/clients/vault.go
+
+			// Check the metrics - we should have an additional renewal
+			assertions.ExpectStatLastValueMatches(vault.MLastLoginFailure, BeZero())
+			assertions.ExpectStatLastValueMatches(vault.MLastLoginSuccess, Not(BeZero()))
+			assertions.ExpectStatSumMatches(vault.MLoginFailures, BeZero())
+			assertions.ExpectStatSumMatches(vault.MLoginSuccesses, Equal(1))
+			assertions.ExpectStatLastValueMatches(vault.MLastRenewSuccess, Not(BeZero()))
+			assertions.ExpectStatSumMatches(vault.MRenewFailures, BeZero())
+			assertions.ExpectStatSumMatches(vault.MRenewSuccesses, Equal(2))
+
 			// Don't need the "Eventually" here, because everything is already up and running
+			getSecret(Default)
+
+			// TEST CASE: we can read the secret after the token expires and login is re-run
+			// We have used up (4-8] seconds of the 10 second lease, if we sleep for 4 seconds, we should see a re-login
+			time.Sleep(4 * time.Second)
+
+			// Check the metrics - we should have an additional renewal failure, and an additional login success
+			// plus 2-3 more renewal successes. The uncertainty is due jitter used caculate the time to renew:
+			// "For a given lease duration, we want to allow 80-90% of that to elapse,"
+			// This means that even though we have a lease interval of 4 seconds, the renewal will happen sooner
+			// This leaves room for the possibility of a 3rd renewal happening before the lease expires
+			assertions.ExpectStatLastValueMatches(vault.MLastLoginFailure, BeZero())
+			assertions.ExpectStatLastValueMatches(vault.MLastLoginSuccess, Not(BeZero()))
+			assertions.ExpectStatSumMatches(vault.MLoginFailures, BeZero())
+			assertions.ExpectStatSumMatches(vault.MLoginSuccesses, Equal(2))
+			assertions.ExpectStatLastValueMatches(vault.MLastRenewSuccess, Not(BeZero()))
+			assertions.ExpectStatSumMatches(vault.MRenewFailures, Equal(1))
+			assertions.ExpectStatSumMatches(vault.MRenewSuccesses, BeNumerically("~", 4, 5))
+
 			getSecret(Default)
 		})
 
@@ -159,3 +212,26 @@ var _ = Describe("Vault Secret Store (AWS Auth)", decorators.Vault, func() {
 	})
 
 })
+
+func resetViews() {
+	views := []*view.View{
+		vault.MLastLoginSuccessView,
+		vault.MLoginFailuresView,
+		vault.MLoginSuccessesView,
+		vault.MLastLoginFailureView,
+		vault.MLastRenewFailureView,
+		vault.MLastRenewSuccessView,
+		vault.MRenewFailuresView,
+		vault.MRenewSuccessesView,
+	}
+	view.Unregister(views...)
+	_ = view.Register(views...)
+	assertions.ExpectStatLastValueMatches(vault.MLastLoginSuccess, BeZero())
+	assertions.ExpectStatLastValueMatches(vault.MLastLoginFailure, BeZero())
+	assertions.ExpectStatSumMatches(vault.MLoginSuccesses, BeZero())
+	assertions.ExpectStatSumMatches(vault.MLoginFailures, BeZero())
+	assertions.ExpectStatLastValueMatches(vault.MLastRenewFailure, BeZero())
+	assertions.ExpectStatLastValueMatches(vault.MLastRenewSuccess, BeZero())
+	assertions.ExpectStatSumMatches(vault.MRenewFailures, BeZero())
+	assertions.ExpectStatSumMatches(vault.MRenewSuccesses, BeZero())
+}
