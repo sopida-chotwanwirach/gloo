@@ -130,7 +130,18 @@ helm repo update
 helm install vault hashicorp/vault --set "server.dev.enabled=true" --namespace vault --create-namespace
 ```
 
+When the following command returns a table of key-value pairs, vault is up and running and ready to use.
+```shell
+kubectl exec -n vault  vault-0 -- vault status
+```
+
 ### Step 2: Enable AWS authentication on Vault
+Open a shell on the vault pod for steps 2-4:
+
+```shell
+k exec -n vault -it vault-0 -- sh
+```
+Then:
 
 ```shell
 vault auth enable aws
@@ -145,6 +156,7 @@ vault secrets enable -path="dev" -version=2 kv
 ### Step 4: Create a Vault Policy
 
 ```shell
+cd
 cat <<EOF > policy.hcl
 # Access to dev path
 path "dev/*" {
@@ -165,15 +177,20 @@ vault policy write dev policy.hcl
 rm -f policy.hcl
 ```
 
+At this point you can log out of the vault pod:
+```shell
+exit
+```
+
 ### Step 5: Configure the AWS authentication method
 
-Next, configure Vault's AWS authentication method to point to the Security Token Service (STS) endpoint for your provider.
+Next, configure Vault's AWS authentication method to point to the Security Token Service (STS) endpoint for your provider. We will run these steps from outside the pod using `kubectl` because we rely on environment variables we have set above.
 
 In later steps, you add an `iam_server_id_header_value` to secure the authN/authZ process and ensure that it matches with your configuration in Gloo For more information on the IAM Server ID header, see the Vault [API docs](https://developer.hashicorp.com/vault/api-docs/auth/aws#iam_server_id_header_value).
 
 ```shell
 export IAM_SERVER_ID_HEADER_VALUE=vault.gloo.example.com
-vault write auth/aws/config/client \
+kubectl -n vault exec vault-0 -- vault write auth/aws/config/client \
 	iam_server_id_header_value=${IAM_SERVER_ID_HEADER_VALUE} \
 	sts_endpoint=https://sts.${AWS_REGION}.amazonaws.com \
 	sts_region=${AWS_REGION}
@@ -184,7 +201,7 @@ vault write auth/aws/config/client \
 Finally, bind the Vault authentication and policy to your role in AWS. To use IAM roles, the following command sets the `auth_type` to `iam`.
 
 ```shell
-vault write auth/aws/role/dev-role-iam \
+kubectl -n vault exec vault-0 -- vault write auth/aws/role/dev-role-iam \
 	auth_type=iam \
     bound_iam_principal_arn="${VAULT_AUTH_ROLE_ARN}" \
     policies=dev \
@@ -262,6 +279,20 @@ Code: 400. Errors:
 ```
 
 To resolve this issue, add the `iam:GetRole` action to a policy attached to the assumed-role identity. In the previous example, you would add the `iam:GetRole` action to the identity `arn:aws:sts::account-id:assumed-role/foo-role/bar`.
+
+One way to do this is via the console:
+* Log into the AWS console and go to the IAM dashbord
+* Search for and select the IAM user, in this example `dev-role-iam`
+* Go to the `Permissions` tab, which should be the first/default tab
+* Find the `Add Permissions` dropdown and select `Create Inline Policy`
+* It will ask you to choose a service. Pick `IAM`
+* A new `Actions Allowed` menu will appear. Expand the `Read` section and select `GetRole`
+* In the `Resources` section below, select `Specific` and follow the `Add ARNs to restrict access` link
+* Choose the text option, and add the arn, `arn:aws:iam::account-id:role/dev-role-iam` in this example. Click the `Add ARNS` button
+* The overlay window will close, and you can select `Next`
+* Choose a policy name and click `Create Policy`
+* Done!
+
 
 ## Summary
 
