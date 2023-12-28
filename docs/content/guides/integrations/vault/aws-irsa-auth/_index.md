@@ -57,7 +57,7 @@ cat <<EOF > trust-relationship.json
 }
 EOF
 
-export VAULT_AUTH_ROLE_NAME="dev-role-iam"
+export VAULT_AUTH_ROLE_NAME="dev-role-iam-${CLUSTER_NAME}"
 export VAULT_AUTH_ROLE_ARN=$([[ $(aws iam list-roles --query "Roles[?RoleName=='${VAULT_AUTH_ROLE_NAME}'].Arn" --output text) == "" ]] \
 	&& aws iam create-role \
 		--role-name $VAULT_AUTH_ROLE_NAME \
@@ -73,7 +73,7 @@ rm -f trust-relationship.json
 Create an AWS Policy to grant the necessary permissions for Vault to perform actions, such as assuming the IAM role and getting instance and user information. This is a lighter version of Vault's [Recommended Vault IAM Policy](https://developer.hashicorp.com/vault/docs/auth/aws#recommended-vault-iam-policy).
 
 ```shell
-export VAULT_AUTH_POLICY_NAME=gloo-vault-auth-policy
+export VAULT_AUTH_POLICY_NAME=gloo-vault-auth-policy-${CLUSTER_NAME}
 cat <<EOF > gloo-vault-auth-policy.json
 {
 	"Version": "2012-10-17",
