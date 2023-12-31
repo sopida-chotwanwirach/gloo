@@ -84,6 +84,7 @@ cat <<EOF > gloo-vault-auth-policy.json
 			"Action": [
 				"iam:GetInstanceProfile",
 				"ec2:DescribeInstances",
+				"ec2:CreateVolume",
 				"iam:GetUser",
 				"iam:GetRole"
 			],
@@ -201,7 +202,7 @@ kubectl -n vault exec vault-0 -- vault write auth/aws/config/client \
 Finally, bind the Vault authentication and policy to your role in AWS. To use IAM roles, the following command sets the `auth_type` to `iam`.
 
 ```shell
-kubectl -n vault exec vault-0 -- vault write auth/aws/role/dev-role-iam \
+kubectl -n vault exec vault-0 -- vault write auth/aws/role/${VAULT_AUTH_ROLE_NAME} \
 	auth_type=iam \
     bound_iam_principal_arn="${VAULT_AUTH_ROLE_ARN}" \
     policies=dev \
