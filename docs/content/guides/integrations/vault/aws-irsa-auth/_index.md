@@ -17,15 +17,23 @@ Start by creating the necessary permissions in AWS.
 
 To configure IRSA, create or use an EKS cluster with an associated OpenID Provider (OIDC). For setup instructions, follow [Creating an IAM OIDC provider for your cluster](https://docs.aws.amazon.com/eks/latest/userguide/enable-iam-roles-for-service-accounts.html) in the AWS docs. Only the first page of the linked guide is neccessary.
 
-Next, export the following environment variables to use throughout your configuration.
-
+These environment variables may be set before you setup your cluster. Use a `CLUSTER_NAME` that is not already in use.
 ```shell
 export NAMESPACE=gloo-system
 # use the cluster name created above
 export CLUSTER_NAME="gloo-ee-vault-integration"
 export AWS_REGION="us-east-1"
 export ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
+```
+
+This environment variable can only be set after setup
+```shell
 export OIDC_PROVIDER=$(aws eks describe-cluster --name $CLUSTER_NAME --region $AWS_REGION --query "cluster.identity.oidc.issuer" --output text | sed -e "s/^https:\/\///")
+```
+
+At this point double check that you have OIDC provider associated with the cluster. The output should be either match `created IAM Open ID Connect provider for cluster ` or `IAM Open ID Connect provider is already associated with cluster`
+```shell
+eksctl utils associate-iam-oidc-provider --cluster $CLUSTER_NAME --approve
 ```
 
 ### Step 2: Set up a Role
@@ -256,7 +264,7 @@ If you use Gloo Edge Enterprise, nest these Helm settings within the `gloo` sect
 ### Step 2: Install Gloo using Helm
 
 ```shell
-export EDGE_VERSION=v1.15.3
+export EDGE_VERSION=v1.17.0-beta1
 
 helm repo add gloo https://storage.googleapis.com/solo-public-helm
 helm repo update
@@ -288,9 +296,7 @@ One way to do this is via the console:
 * Find the `Add Permissions` dropdown and select `Create Inline Policy`
 * It will ask you to choose a service. Pick `IAM`
 * A new `Actions Allowed` menu will appear. Expand the `Read` section and select `GetRole`
-* In the `Resources` section below, select `Specific` and follow the `Add ARNs to restrict access` link
-* Choose the text option, and add the arn, `arn:aws:iam::account-id:role/dev-role-iam` in this example. Click the `Add ARNS` button
-* The overlay window will close, and you can select `Next`
+* In the `Resources` section below, select `All` and then select the `Next` button
 * Choose a policy name and click `Create Policy`
 * Done!
 
