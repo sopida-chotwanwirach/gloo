@@ -92,7 +92,6 @@ cat <<EOF > gloo-vault-auth-policy.json
 			"Action": [
 				"iam:GetInstanceProfile",
 				"ec2:DescribeInstances",
-				"ec2:CreateVolume",
 				"iam:GetUser",
 				"iam:GetRole"
 			],
