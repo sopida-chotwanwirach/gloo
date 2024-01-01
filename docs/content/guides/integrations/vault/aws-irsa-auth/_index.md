@@ -295,7 +295,9 @@ One way to do this is via the console:
 * Find the `Add Permissions` dropdown and select `Create Inline Policy`
 * It will ask you to choose a service. Pick `IAM`
 * A new `Actions Allowed` menu will appear. Expand the `Read` section and select `GetRole`
-* In the `Resources` section below, select `All` and then select the `Next` button
+* In the `Resources` section below, select `Specific` and follow the `Add ARNs to restrict access` link
+* Choose the text option, and add the arn, `arn:aws:iam::account-id:role/dev-role-iam` in this example. Click the `Add ARNS` button
+* The overlay window will close, and you can select `Next`
 * Choose a policy name and click `Create Policy`
 * Done!
 
