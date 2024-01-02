@@ -66,7 +66,7 @@ cat <<EOF > trust-relationship.json
 EOF
 
 export VAULT_AUTH_ROLE_NAME="dev-role-iam-${CLUSTER_NAME}"
-export VAULT_AUTH_ROLE_ARN=$([[ $(aws iam list-roles --query "Roles[?RoleName=='${VAULT_AUTH_ROLE_NAME}'].Arn" --output text) == "" ]] \
+export VAULT_AUTH_ROLE_ARN=$([[ $(aws iam list-roles --query "Roles[?RoleName=='${VAULT_AUTH_ROLE_NAME}'].Arn" --output text) = "" ]] \
 	&& aws iam create-role \
 		--role-name $VAULT_AUTH_ROLE_NAME \
 		--assume-role-policy-document file://trust-relationship.json \
@@ -106,7 +106,7 @@ cat <<EOF > gloo-vault-auth-policy.json
 }
 EOF
 
-export VAULT_AUTH_POLICY_ARN=$([[ $(aws iam list-policies --query "Policies[?PolicyName=='${VAULT_AUTH_POLICY_NAME}'].Arn" --output text) == "" ]] \
+export VAULT_AUTH_POLICY_ARN=$([[ $(aws iam list-policies --query "Policies[?PolicyName=='${VAULT_AUTH_POLICY_NAME}'].Arn" --output text) = "" ]] \
     && aws iam create-policy \
         --region=${AWS_REGION} \
         --policy-name="${VAULT_AUTH_POLICY_NAME}" \
@@ -213,7 +213,7 @@ kubectl -n vault exec vault-0 -- vault write auth/aws/role/${VAULT_AUTH_ROLE_NAM
 	auth_type=iam \
     bound_iam_principal_arn="${VAULT_AUTH_ROLE_ARN}" \
     policies=dev \
-    max_ttl=24h
+    max_ttl=15m
 ```
 
 If this fails see [Access denied due to identity-based policies – implicit denial](#access-denied-due-to-identity-based-policies--implicit-denial)
