@@ -263,7 +263,7 @@ If you use Gloo Edge Enterprise, nest these Helm settings within the `gloo` sect
 ### Step 2: Install Gloo using Helm
 
 ```shell
-export EDGE_VERSION=v1.17.0-beta1
+export EDGE_VERSION=v1.15.3
 
 helm repo add gloo https://storage.googleapis.com/solo-public-helm
 helm repo update
@@ -289,7 +289,7 @@ Code: 400. Errors:
 To resolve this issue, add the `iam:GetRole` action to a policy attached to the assumed-role identity. In the previous example, you would add the `iam:GetRole` action to the identity `arn:aws:sts::account-id:assumed-role/foo-role/bar`.
 
 One way to do this is via the console:
-* Log into the AWS console and go to the IAM dashbord
+* Log into the AWS console and go to the IAM dashboard
 * Search for and select the IAM user, in this example `dev-role-iam`
 * Go to the `Permissions` tab, which should be the first/default tab
 * Find the `Add Permissions` dropdown and select `Create Inline Policy`
