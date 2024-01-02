@@ -315,8 +315,9 @@ var _ = Describe("Vault Token Renewal Logic", func() {
 		})
 
 		// This is the same as the above test, but we set RetryOnNonRenewableSleep to a higher value
-		// to validate that it is applied. In this case it should sleep for 5 seconds,
+		// to validate that it is applied. In this case it should sleep for the default 60 seconds
 		// which means that we will not have time to retry the login before the context is cancelled
+		// and it will return faster than that
 		When("We don't leave time for the sleep loop to finish", func() {
 			BeforeEach(func() {
 				ctx, cancel = context.WithCancel(context.Background())
@@ -329,9 +330,9 @@ var _ = Describe("Vault Token Renewal Logic", func() {
 					internalAuthMethod.EXPECT().Login(ctx, gomock.Any()).AnyTimes().Return(renewableSecret(), nil),
 				)
 				renewer = NewVaultTokenRenewer(&NewVaultTokenRenewerParams{
-					LeaseIncrement:           1,
-					GetWatcher:               getTestWatcher,
-					RetryOnNonRenewableSleep: 5, // Pass this in so we don't have to wait for the default
+					LeaseIncrement: 1,
+					GetWatcher:     getTestWatcher,
+					// Default RetryOnNonRenewableSleep is fine because we are going to cancel the context before it finishes
 				})
 
 				clientAuth = NewRemoteTokenAuth(internalAuthMethod, nil, retry.Attempts(3))
@@ -339,7 +340,8 @@ var _ = Describe("Vault Token Renewal Logic", func() {
 
 			It("should fail when RetryOnNonRenewableSleep is less than our sleep time ", func() {
 
-				// Run through the basic channel output and look at the metrics
+				// Don't Give time for enough retries to get a renewable token
+				// Keep the extra messages on the channels to make sure we don't get any extra metrics
 				go func() {
 					time.Sleep(sleepTime)
 					doneCh <- errors.Errorf("Renewal error") // Force renewal
@@ -350,7 +352,10 @@ var _ = Describe("Vault Token Renewal Logic", func() {
 				}()
 
 				// Use the blocking version here so we can capture the error
+				start := time.Now()
 				err := renewer.RenewToken(ctx, client, clientAuth, nonRenewableSecret())
+				elapsed := time.Since(start)
+				Expect(elapsed).To(BeNumerically("<", 2500*time.Millisecond)) // 2.2 seconds plus a little extra. Much less than the default 60 seconds
 				Expect(err).NotTo(HaveOccurred())
 
 				// The login never fails, it just returns an non-renewable secret
