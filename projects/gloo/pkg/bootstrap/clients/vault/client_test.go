@@ -96,8 +96,9 @@ var _ = Describe("ClientAuth", func() {
 						AccessToken: "placeholder",
 					},
 				}
-
-				clientAuth, _ = ClientAuthFactory(vaultSettings)
+				var err error
+				clientAuth, err = ClientAuthFactory(vaultSettings)
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("should return a Secret", func() {

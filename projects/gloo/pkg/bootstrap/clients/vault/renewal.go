@@ -138,12 +138,18 @@ func (r *VaultTokenRenewer) manageTokenLifecycle(ctx context.Context, client *va
 
 		contextutils.LoggerFrom(ctx).Errorw("Token is not configured to be renewable.", "retry", r.retryOnNonRenewableSleep, "Error", err, "TokenIsRenewable", renewable)
 
-		// The units don't make sense but this is the way the docs recommend doing it
-		time.Sleep(time.Duration(r.retryOnNonRenewableSleep) * time.Second)
+		// Create a timer and wait until its done or the context is cancelled
+		timer := time.NewTimer(time.Duration(r.retryOnNonRenewableSleep) * time.Second)
+		defer timer.Stop()
 
-		// If we are caught in this loop, we don't get to the code that checks the state of the context, so we need to check it here
-		retryLogin := ctx.Err() == nil
-		return retryLogin, nil
+		for {
+			select {
+			case <-ctx.Done(): // context cancelled, don't retry
+				return false, nil
+			case <-timer.C: // timer expired, retry
+				return true, nil
+			}
+		}
 	}
 
 	watcher, err := r.getWatcher(client, secret, r.leaseIncrement)
