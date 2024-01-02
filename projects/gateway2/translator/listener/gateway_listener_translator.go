@@ -360,28 +360,31 @@ func (mfc *httpsFilterChain) translateHttpsFilterChain(
 	listenerReporter reports.ListenerReporter,
 ) (*v1.AggregateListener_HttpFilterChain, map[string]*v1.VirtualHost) {
 	// process routes first, so any route related errors are reported on the httproute.
-	var (
-		routesByHost = map[string]routeutils.SortableRoutes{}
+	routesByHost := buildRoutesPerHost(
+		ctx,
+		mfc.routesWithHosts,
+		routePlugins,
+		mfc.queries,
+		reporter,
 	)
-	for _, routeWithHosts := range mfc.routesWithHosts {
-		parentRefReporter := reporter.Route(&routeWithHosts.Route).ParentRef(&routeWithHosts.ParentRef)
-		routes := httproute.TranslateGatewayHTTPRouteRules(
-			ctx,
-			routePlugins,
-			mfc.queries,
-			routeWithHosts.Route,
-			parentRefReporter,
-		)
 
-		if len(routes) == 0 {
-			// TODO report
-			continue
+	var (
+		virtualHostRefs []string
+		virtualHosts    = map[string]*v1.VirtualHost{}
+	)
+	for host, vhostRoutes := range routesByHost {
+		sort.Stable(vhostRoutes)
+		vhostName := makeVhostName(parentName, host)
+		virtualHosts[vhostName] = &v1.VirtualHost{
+			Name:    vhostName,
+			Domains: []string{host},
+			Routes:  vhostRoutes.ToRoutes(),
+			Options: nil,
 		}
 
-		for _, host := range routeWithHosts.Hostnames {
-			routesByHost[host] = append(routesByHost[host], routeutils.ToSortable(&routeWithHosts.Route, routes)...)
-		}
+		virtualHostRefs = append(virtualHostRefs, vhostName)
 	}
+	sort.Strings(virtualHostRefs)
 
 	sslConfig, err := translateSslConfig(
 		ctx,
@@ -410,28 +413,45 @@ func (mfc *httpsFilterChain) translateHttpsFilterChain(
 	}
 	matcher := &v1.Matcher{SslConfig: sslConfig, SourcePrefixRanges: nil, PassthroughCipherSuites: nil}
 
-	var (
-		virtualHostRefs []string
-		virtualHosts    = map[string]*v1.VirtualHost{}
-	)
-	for host, vhostRoutes := range routesByHost {
-		sort.Stable(vhostRoutes)
-		vhostName := makeVhostName(parentName, host)
-		virtualHosts[vhostName] = &v1.VirtualHost{
-			Name:    vhostName,
-			Domains: []string{host},
-			Routes:  vhostRoutes.ToRoutes(),
-			Options: nil,
-		}
-
-		virtualHostRefs = append(virtualHostRefs, vhostName)
-	}
-	sort.Strings(virtualHostRefs)
-
 	return &v1.AggregateListener_HttpFilterChain{
 		Matcher:         matcher,
 		VirtualHostRefs: virtualHostRefs,
 	}, virtualHosts
+}
+
+func buildRoutesPerHost(
+	ctx context.Context,
+	routes []*query.ListenerRouteResult,
+	plugins registry.RoutePluginRegistry,
+	queries query.GatewayQueries,
+	reporter reports.Reporter,
+) map[string]routeutils.SortableRoutes {
+	routesByHost := map[string]routeutils.SortableRoutes{}
+	for _, routeWithHosts := range routes {
+		parentRefReporter := reporter.Route(&routeWithHosts.Route).ParentRef(&routeWithHosts.ParentRef)
+		routes := httproute.TranslateGatewayHTTPRouteRules(
+			ctx,
+			plugins,
+			queries,
+			routeWithHosts.Route,
+			parentRefReporter,
+		)
+
+		if len(routes) == 0 {
+			// TODO report
+			continue
+		}
+
+		hostnames := routeWithHosts.Hostnames
+		if len(hostnames) == 0 {
+			hostnames = []string{"*"}
+		}
+
+		for _, host := range hostnames {
+			routesByHost[host] = append(routesByHost[host], routeutils.ToSortable(&routeWithHosts.Route, routes)...)
+		}
+	}
+	return routesByHost
 }
 
 func translateSslConfig(
