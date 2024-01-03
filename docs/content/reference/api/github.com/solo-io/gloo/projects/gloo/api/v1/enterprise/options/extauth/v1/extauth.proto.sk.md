@@ -431,9 +431,9 @@ This is used with custom auth servers.
 ### BasicAuth
 
  
-This is the legacy/simple basic auth config. It supports the APR and SHA-1 hashing algorithms.
-When using this config only one `Authorization` header can be passed. This means that this config cannot be used in
-conjunction with other configs that rely on the `Authorization` header as well.
+This legacy basic auth config supports the APR and SHA-1 hashing algorithms.
+
+When using basic auth, requests can pass only one `Authorization` header. You cannot use basic auth config in conjunction with other auth configs that rely on the `Authorization` header as well. In case of such a conflict, use a different type of auth config or configure a different header, such as `Auth`.
 
 ```yaml
 "realm": string
