@@ -4,7 +4,7 @@ description: Secure your secrets using AWS IAM Roles for Service Accounts (IRSA)
 weight: 1
 ---
 
-Vault supports AWS IAM roles for authentication, offering a choice between hard-coded long-lived credentials and automated AWS IAM Roles for Service Accounts (IRSA).
+Vault supports AWS IAM roles for authentication, offering a choice between hard-coded, long-lived credentials and automated AWS IAM Roles for Service Accounts (IRSA).
 
 AWS IAM Roles for Service Accounts (IRSA) enable you to associate IAM roles with Kubernetes Service Accounts, allowing automatic retrieval and use of temporary AWS credentials.
 This integration enhances security and operational efficiency, ensuring Kubernetes applications securely access Vault secrets while following AWS IAM best practices.
@@ -15,30 +15,29 @@ Start by creating the necessary permissions in AWS.
 
 ### Step 1: Create a cluster with OIDC
 
-To configure IRSA, create or use an EKS cluster with an associated OpenID Provider (OIDC). For setup instructions, follow [Creating an IAM OIDC provider for your cluster](https://docs.aws.amazon.com/eks/latest/userguide/enable-iam-roles-for-service-accounts.html) in the AWS docs. Only the first page of the linked guide is neccessary.
+To configure IRSA, create or use an EKS cluster with an associated OpenID Provider (OIDC). Be sure to use a cluster that you have not yet installed Gloo Edge into.
 
-These environment variables may be set before you setup your cluster. Use a `CLUSTER_NAME` that is not already in use.
-```shell
-export NAMESPACE=gloo-system
-# use the cluster name created above
-export CLUSTER_NAME="gloo-ee-vault-integration"
-export AWS_REGION="us-east-1"
-export ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
-```
+1. Save the following details in environment variables.
+   ```shell
+   export NAMESPACE=gloo-system
+   export CLUSTER_NAME=<cluster_name>
+   export AWS_REGION=<region>
+   export ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
+   ```
 
-This environment variable can only be set after setup
-```shell
-export OIDC_PROVIDER=$(aws eks describe-cluster --name ${CLUSTER_NAME} --region ${AWS_REGION} --query "cluster.identity.oidc.issuer" --output text | sed -e "s/^https:\/\///")
-```
+2. Associate an OIDC provider with your cluster. The output `created IAM Open ID Connect provider for cluster` means that you successfully associated an OIDC provider, and the output `IAM Open ID Connect provider is already associated with cluster` means that an OIDC provider already existed for the cluster. For more information, see [Creating an IAM OIDC provider for your cluster](https://docs.aws.amazon.com/eks/latest/userguide/enable-iam-roles-for-service-accounts.html) in the AWS docs.
+   ```shell
+   eksctl utils associate-iam-oidc-provider --cluster ${CLUSTER_NAME} --approve
+   ```
 
-At this point double check that you have OIDC provider associated with the cluster. The output should be either match `created IAM Open ID Connect provider for cluster ` or `IAM Open ID Connect provider is already associated with cluster`
-```shell
-eksctl utils associate-iam-oidc-provider --cluster ${CLUSTER_NAME} --approve
-```
+3. Save the OIDC provider for your cluster in an environment variable.
+   ```shell
+   export OIDC_PROVIDER=$(aws eks describe-cluster --name ${CLUSTER_NAME} --region ${AWS_REGION} --query "cluster.identity.oidc.issuer" --output text | sed -e "s/^https:\/\///")
+   ```
 
 ### Step 2: Set up a Role
 
-Create an AWS Role with a trust relationship to your OIDC provider. This allows the provider to assume the AWS IAM role, specifically for the service accounts in `gloo` and `discovery`.
+Create an AWS Role with a trust relationship to your OIDC provider. The provider can assume the role for the `gloo` and `discovery` service accounts.
 
 ```shell
 cat <<EOF > trust-relationship.json
@@ -75,137 +74,125 @@ export VAULT_AUTH_ROLE_ARN=$(aws iam create-role \
 rm -f trust-relationship.json
 ```
 
-If you get an `EntityAlreadyExists` error then an role with the same name already exists. The easiest path forward is to set a different `$VAULT_AUTH_ROLE_NAME` and try again. You can inspect and modify the existing role, but make sure you understand how it is being used before making any changes. If you wish to use the existing name the command:
-
-`export VAULT_AUTH_ROLE_ARN=$(aws iam list-roles --query "Roles[?RoleName=='${VAULT_AUTH_ROLE_NAME}'].Arn"--output text)`
-
-will set the `$VAULT_AUTH_ROLE_ARN` environment variable.
+{{% notice note %}}
+If you see an `EntityAlreadyExists` error, then a role with the same name already exists. Use a different `$VAULT_AUTH_ROLE_NAME` than `dev-role-iam-${CLUSTER_NAME}`, and try again. If you want to instead inspect and modify the existing role, first ensure that you understand how it is being used before making any changes, and then run `export VAULT_AUTH_ROLE_ARN=$(aws iam list-roles --query "Roles[?RoleName=='${VAULT_AUTH_ROLE_NAME}'].Arn"--output text)` to set the `$VAULT_AUTH_ROLE_ARN` environment variable.
+{{% /notice %}}
 
 ### Step 3: Set a Policy
 
-Create an AWS Policy to grant the necessary permissions for Vault to perform actions, such as assuming the IAM role and getting instance and user information. This is a lighter version of Vault's [Recommended Vault IAM Policy](https://developer.hashicorp.com/vault/docs/auth/aws#recommended-vault-iam-policy).
+1. Create an AWS Policy to grant the necessary permissions for Vault to perform actions, such as assuming the IAM role and getting instance and user information. This is a lighter version of Vault's [Recommended Vault IAM Policy](https://developer.hashicorp.com/vault/docs/auth/aws#recommended-vault-iam-policy).
+   ```shell
+   export VAULT_AUTH_POLICY_NAME=gloo-vault-auth-policy-${CLUSTER_NAME}
+   cat <<EOF > gloo-vault-auth-policy.json
+   {
+   	"Version": "2012-10-17",
+   	"Statement": [
+   		{
+   			"Sid": "",
+   			"Effect": "Allow",
+   			"Action": [
+   				"iam:GetInstanceProfile",
+   				"ec2:DescribeInstances",
+   				"iam:GetUser",
+   				"iam:GetRole"
+   			],
+   			"Resource": "*"
+   		},
+   		{
+   			"Effect": "Allow",
+   			"Action": ["sts:AssumeRole"],
+   			"Resource": ["${VAULT_AUTH_ROLE_ARN}"]
+   		}
+   	]
+   }
+   EOF
 
-```shell
-export VAULT_AUTH_POLICY_NAME=gloo-vault-auth-policy-${CLUSTER_NAME}
-cat <<EOF > gloo-vault-auth-policy.json
-{
-	"Version": "2012-10-17",
-	"Statement": [
-		{
-			"Sid": "",
-			"Effect": "Allow",
-			"Action": [
-				"iam:GetInstanceProfile",
-				"ec2:DescribeInstances",
-				"iam:GetUser",
-				"iam:GetRole"
-			],
-			"Resource": "*"
-		},
-		{
-			"Effect": "Allow",
-			"Action": ["sts:AssumeRole"],
-			"Resource": ["${VAULT_AUTH_ROLE_ARN}"]
-		}
-	]
-}
-EOF
+   export VAULT_AUTH_POLICY_ARN=$(aws iam create-policy \
+           --region=${AWS_REGION} \
+           --policy-name="${VAULT_AUTH_POLICY_NAME}" \
+           --description="Policy used by the Vault user to check instance identity" \
+           --policy-document file://gloo-vault-auth-policy.json | jq -r .Policy.Arn)
 
-export VAULT_AUTH_POLICY_ARN=$(aws iam create-policy \
-        --region=${AWS_REGION} \
-        --policy-name="${VAULT_AUTH_POLICY_NAME}" \
-        --description="Policy used by the Vault user to check instance identity" \
-        --policy-document file://gloo-vault-auth-policy.json | jq -r .Policy.Arn)
+   rm -f gloo-vault-auth-policy.json
+   ```
 
-rm -f gloo-vault-auth-policy.json
-```
-If you get an `EntityAlreadyExists` error then an auth policy with the same name already exists. The easiest path forward is to set a different `$VAULT_AUTH_POLICY_NAME` and try again. You can inspect and modify the existing policy, but make sure you understand how it is being used before making any changes. If you wish to use the existing policy, the command:
+   {{% notice note %}}
+   If you see an `EntityAlreadyExists` error, then a policy with the same name already exists. Use a different `$VAULT_AUTH_POLICY_NAME` than `gloo-vault-auth-policy-${CLUSTER_NAME}`, and try again. If you want to instead inspect and modify the existing policy, first ensure that you understand how it is being used before making any changes, and then run `eexport VAULT_AUTH_POLICY_ARN=$(aws iam list-policies --query "Policies[?PolicyName=='${VAULT_AUTH_POLICY_NAME}'].Arn" --output text)` to set the `$VAULT_AUTH_POLICY_ARN` environment variable.
+   {{% /notice %}}
 
- `export VAULT_AUTH_POLICY_ARN=$(aws iam list-policies --query "Policies[?PolicyName=='${VAULT_AUTH_POLICY_NAME}'].Arn" --output text)`
-
- will set the `$VAULT_AUTH_POLICY_ARN` environement variable.
-
-
-Finally, attach the newly-created policy to the role that you created earlier.
-```shell
-aws iam attach-role-policy --role-name=${VAULT_AUTH_ROLE_NAME} --policy-arn=${VAULT_AUTH_POLICY_ARN}
-```
+2. Attach the policy to the role that you created earlier.
+   ```shell
+   aws iam attach-role-policy --role-name=${VAULT_AUTH_ROLE_NAME} --policy-arn=${VAULT_AUTH_POLICY_ARN}
+   ```
 
 ## Vault
 
-After you set up your AWS resources, you can configure Vault with AWS authentication. This guide has only been verfied with Vault installed in the same EKS cluster we created in the [AWS section](#aws).
+After you set up your AWS resources, you can configure Vault with AWS authentication.
 
 ### Step 1: Set up Vault
 
-Install Vault by choosing one of the installation methods in Vault's [Installing Vault](https://developer.hashicorp.com/vault/docs/install) documentation.
+Deploy an instance of Vault to your cluster. Note that this guide is tested only with Vault installed in the same EKS cluster as in the [AWS section](#aws).
 
-This is a basic approach that may work for you. Note that is uses dev mode and is intended for use with this guide only. (https://developer.hashicorp.com/vault/docs/concepts/dev-server)
+1. Install Vault by choosing one of the installation methods in Vault's [Installing Vault](https://developer.hashicorp.com/vault/docs/install) documentation. The following example uses the basic approach from the Helm installation method. Note that this method uses [dev server mode](https://developer.hashicorp.com/vault/docs/concepts/dev-server), and is intended for testing use with this guide only. 
+   ```shell
+   helm repo add hashicorp https://helm.releases.hashicorp.com
+   helm repo update
 
-```shell
-helm repo add hashicorp https://helm.releases.hashicorp.com
-helm repo update
+   helm install vault hashicorp/vault --set "server.dev.enabled=true" --namespace vault --create-namespace
+   ```
 
-helm install vault hashicorp/vault --set "server.dev.enabled=true" --namespace vault --create-namespace
-```
+2. When the following command returns a table of key-value pairs, Vault is running and ready to use.
+   ```shell
+   kubectl exec -n vault  vault-0 -- vault status
+   ```
 
-When the following command returns a table of key-value pairs, vault is up and running and ready to use.
-```shell
-kubectl exec -n vault  vault-0 -- vault status
-```
+### Step 2: Enable AWS authentication and create a Vault policy
 
+Enable AWS authentication and a secrets engine for Vault, and create a Vault policy.
 
-### Step 2: Enable AWS authentication on Vault
-Open a shell on the vault pod for steps 2-4:
+1. Log in to the Vault pod to open a shell.
+   ```shell
+   kubectl exec -n vault -it vault-0 -- sh
+   ```
 
-```shell
-kubectl exec -n vault -it vault-0 -- sh
-```
-Then:
+2. Enable AWS authentication for Vault.
+   ```shell
+   vault auth enable aws
+   ```
 
-```shell
-vault auth enable aws
-```
+3. Enable a secrets engine for Vault.
+   ```shell
+   vault secrets enable -path="dev" -version=2 kv
+   ```
 
-### Step 3: Enable a secrets engine
+4. Create a Vault policy.
+   ```shell
+   cd
+   cat <<EOF > policy.hcl
+   # Access to dev path
+   path "dev/*" {
+   	capabilities = ["create", "read", "update", "delete", "list"]
+   } 
 
-```shell
-vault secrets enable -path="dev" -version=2 kv
-```
+   # Additional access for UI
+   path "dev/" {
+   	capabilities = ["list"]
+   }
 
-### Step 4: Create a Vault Policy
+   path "sys/mounts" {
+   	capabilities = ["read", "list"]
+   }
+   EOF
 
-```shell
-cd
-cat <<EOF > policy.hcl
-# Access to dev path
-path "dev/*" {
-	capabilities = ["create", "read", "update", "delete", "list"]
-} 
+   vault policy write dev policy.hcl
+   rm -f policy.hcl
+   ```
 
-# Additional access for UI
-path "dev/" {
-	capabilities = ["list"]
-}
+5. To log out of the Vault pod, enter `exit`.
 
-path "sys/mounts" {
-	capabilities = ["read", "list"]
-}
-EOF
+### Step 3: Configure the AWS authentication method
 
-vault policy write dev policy.hcl
-rm -f policy.hcl
-```
-
-At this point you can log out of the vault pod:
-```shell
-exit 
-```
-
-### Step 5: Configure the AWS authentication method
-
-Next, configure Vault's AWS authentication method to point to the Security Token Service (STS) endpoint for your provider. We will run these steps from outside the pod using `kubectl` because we rely on environment variables we have set above.
-
-In later steps, you add an `iam_server_id_header_value` to secure the authN/authZ process and ensure that it matches with your configuration in Gloo For more information on the IAM Server ID header, see the Vault [API docs](https://developer.hashicorp.com/vault/api-docs/auth/aws#iam_server_id_header_value).
+Configure Vault's AWS authentication method to point to the Security Token Service (STS) endpoint for your provider. Run these steps outside the Vault pod, because the `kubectl` command uses the environment variables that you set earlier. In later steps, you add an `iam_server_id_header_value` to secure the authN/authZ process and ensure that it matches with your configuration in Gloo. For more information on the IAM Server ID header, see the Vault [API docs](https://developer.hashicorp.com/vault/api-docs/auth/aws#iam_server_id_header_value).
 
 ```shell
 export IAM_SERVER_ID_HEADER_VALUE=vault.gloo.example.com
@@ -215,9 +202,9 @@ kubectl -n vault exec vault-0 -- vault write auth/aws/config/client \
 	sts_region=${AWS_REGION}
 ```
 
-### Step 6: Associate the Vault Policy with AWS Role
+### Step 4: Associate the Vault Policy with AWS Role
 
-Finally, bind the Vault authentication and policy to your role in AWS. To use IAM roles, the following command sets the `auth_type` to `iam`.
+Bind the Vault authentication and policy to your role in AWS. To use IAM roles, the following command sets the `auth_type` to `iam`.
 
 ```shell
 kubectl -n vault exec vault-0 -- vault write auth/aws/role/${VAULT_AUTH_ROLE_NAME} \
@@ -227,12 +214,11 @@ kubectl -n vault exec vault-0 -- vault write auth/aws/role/${VAULT_AUTH_ROLE_NAM
     max_ttl=15m
 ```
 
-If this fails see [Access denied due to identity-based policies – implicit denial](#access-denied-due-to-identity-based-policies--implicit-denial)
-
+If this command fails, see [Access denied due to identity-based policies – implicit denial](#access-denied-due-to-identity-based-policies--implicit-denial).
 
 ## Gloo Edge
 
-Lastly, install Gloo Edge by using a configuration that allows Vault and IRSA credential fetching. This guide has only been verfied with Vault installed in the same EKS cluster we created in the [AWS section](#aws).
+Lastly, install Gloo Edge by using a configuration that allows Vault and IRSA credential fetching.
 
 ### Step 1: Prepare Helm overrides
 
@@ -272,7 +258,8 @@ If you use Gloo Edge Enterprise, nest these Helm settings within the `gloo` sect
 {{% /notice %}}
 
 ### Step 2: Install Gloo using Helm
-In this example we are using Edge version `v1.15.3`. You may use any version greater than this.
+
+This example uses Edge version `v1.15.3`, but you can use any version later than this.
 
 ```shell
 export EDGE_VERSION=v1.15.3
@@ -281,6 +268,11 @@ helm repo add gloo https://storage.googleapis.com/solo-public-helm
 helm repo update
 helm install gloo gloo/gloo --namespace gloo-system --create-namespace --version ${EDGE_VERSION} --values helm-overrides.yaml
 ```
+
+## Summary
+
+Gloo Edge now securely accesses Vault secrets using temporary credentials obtained through AWS IAM Roles for Service Accounts (IRSA).
+This enhances security, streamlines access control, and simplifies authorization within your Kubernetes environment.
 
 ## Troubleshooting
 
@@ -298,60 +290,60 @@ Code: 400. Errors:
 	status code: 403, request id: e348ee87-6d44-493b-8763-14fff6aea689
 ```
 
-The following commands will create and associate the necessary policy.
+To create and associate the necessary policy:
 
-First set an environment variable with the assumed role. In this example it is `foo-role`, and you will need to set it the appropraite value based on your error message:
+1. Set an environment variable with the assumed role. You can find the value in your error message.
+   ```shell
+   export VAULT_ASSUMED_ROLE=<role>
+   ```
 
-```shell
-# Set to your appropriate value
-export VAULT_ASSUMED_ROLE=foo-role
-```
+2. Create the policy and associate it with the role.
+   ```shell
+   export VAULT_AUTH_GET_ROLE_POLICY_NAME=gloo-vault-auth-get-role-policy-${CLUSTER_NAME}
+   cat <<EOF > gloo-vault-auth-policy-get-role.json
+   {
+       "Version": "2012-10-17",
+       "Statement": [
+           {
+               "Sid": "",
+               "Effect": "Allow",
+               "Action": [
+                   "iam:GetInstanceProfile",
+                   "ec2:DescribeInstances",
+                   "iam:GetUser",
+                   "iam:GetRole"
+               ],
+               "Resource": "*"
+           },
+           {
+               "Effect": "Allow",
+               "Action": [
+                   "sts:AssumeRole"
+               ],
+               "Resource": [
+                   "${VAULT_AUTH_ROLE_ARN}"
+               ]
+           }
+       ]
+   }
+   EOF
 
-Then create the policy and associate it with the role:
-```shell
-export VAULT_AUTH_GET_ROLE_POLICY_NAME=gloo-vault-auth-get-role-policy-${CLUSTER_NAME}
-cat <<EOF > gloo-vault-auth-policy-get-role.json
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Sid": "",
-            "Effect": "Allow",
-            "Action": [
-                "iam:GetInstanceProfile",
-                "ec2:DescribeInstances",
-                "iam:GetUser",
-                "iam:GetRole"
-            ],
-            "Resource": "*"
-        },
-        {
-            "Effect": "Allow",
-            "Action": [
-                "sts:AssumeRole"
-            ],
-            "Resource": [
-                "${VAULT_AUTH_ROLE_ARN}"
-            ]
-        }
-    ]
-}
-EOF
+   export VAULT_AUTH_POLICY_ASSUME_ROLE_ARN=$(aws iam create-policy \
+           --region=${AWS_REGION} \
+           --policy-name="${VAULT_AUTH_GET_ROLE_POLICY_NAME}" \
+           --description="Policy used by the Vault assumed role to access the ${VAULT_AUTH_ROLE_NAME} role" \
+           --policy-document file://gloo-vault-auth-policy-get-role.json | jq -r .Policy.Arn)
 
-export VAULT_AUTH_POLICY_ASSUME_ROLE_ARN=$(aws iam create-policy \
-        --region=${AWS_REGION} \
-        --policy-name="${VAULT_AUTH_GET_ROLE_POLICY_NAME}" \
-        --description="Policy used by the Vault assumed role to access the ${VAULT_AUTH_ROLE_NAME} role" \
-        --policy-document file://gloo-vault-auth-policy-get-role.json | jq -r .Policy.Arn)
+   aws iam attach-role-policy --role-name ${VAULT_ASSUMED_ROLE} --policy-arn=${VAULT_AUTH_POLICY_ASSUME_ROLE_ARN}
 
-aws iam attach-role-policy --role-name ${VAULT_ASSUMED_ROLE} --policy-arn=${VAULT_AUTH_POLICY_ASSUME_ROLE_ARN}
+   rm gloo-vault-auth-policy-get-role.json
+   ```
 
-rm gloo-vault-auth-policy-get-role.json
-```
-
-You should now be able to successfully execute the vault command to associate the vault policy with the AWS Role, though it may take a few moments for the permissions to propagate.
-
-## Summary
-
-Now, Gloo Edge securely accesses Vault secrets using temporary credentials obtained through AWS IAM Roles for Service Accounts (IRSA).
-This enhances security, streamlines access control, and simplifies authorization within your Kubernetes environment.
+3. Try to associate the Vault policy with the AWS role again. Note that it might take a few moments for the permissions to propagate.
+   ```shell
+   kubectl -n vault exec vault-0 -- vault write auth/aws/role/${VAULT_AUTH_ROLE_NAME} \
+   	auth_type=iam \
+       bound_iam_principal_arn="${VAULT_AUTH_ROLE_ARN}" \
+       policies=dev \
+       max_ttl=15m
+   ```
