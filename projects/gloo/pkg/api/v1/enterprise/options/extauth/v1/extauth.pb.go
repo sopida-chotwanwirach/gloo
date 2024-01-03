@@ -945,7 +945,7 @@ func (x *AuthPlugin) GetConfig() *_struct.Struct {
 
 // This is the legacy/simple basic auth config. It supports the APR and SHA-1 hashing algorithms.
 // When using this config only one `Authorization` header can be passed. This means that this config cannot be used in
-// conjunction with other configs that rely on the `Authorization` header (e.g. the JWT config).
+// conjunction with other configs that rely on the `Authorization` header as well.
 type BasicAuth struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
