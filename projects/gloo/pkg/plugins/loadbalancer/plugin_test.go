@@ -136,6 +136,10 @@ status: {}
 			Expect(err).NotTo(HaveOccurred())
 			Expect(out.LbPolicy).To(Equal(envoy_config_cluster_v3.Cluster_LEAST_REQUEST))
 			Expect(out.GetLeastRequestLbConfig()).NotTo(BeNil())
+
+			slowStartConfig := out.GetLeastRequestLbConfig().GetSlowStartConfig()
+			err = slowStartConfig.Validate()
+			Expect(err).ToNot(HaveOccurred())
 		})
 	})
 
@@ -188,6 +192,10 @@ status: {}
 		Expect(err).NotTo(HaveOccurred())
 		Expect(out.LbPolicy).To(Equal(envoy_config_cluster_v3.Cluster_ROUND_ROBIN))
 		Expect(out.GetRoundRobinLbConfig()).NotTo(BeNil())
+
+		slowStartConfig := out.GetRoundRobinLbConfig().GetSlowStartConfig()
+		err = slowStartConfig.Validate()
+		Expect(err).ToNot(HaveOccurred())
 	})
 
 	It("should set lb policy ring hash - basic config", func() {

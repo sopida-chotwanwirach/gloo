@@ -177,6 +177,7 @@ func toSlowStartConfig(cfg *v1.LoadBalancerConfig_SlowStartConfig) *envoy_config
 	if cfg.GetAggression() != nil {
 		out.Aggression = &envoy_config_core_v3.RuntimeDouble{
 			DefaultValue: cfg.GetAggression().GetValue(),
+			RuntimeKey:   "gloo.upstream.loadBalancer.slowStart.aggression",
 		}
 	}
 	if cfg.GetMinWeightPercent() != nil {
